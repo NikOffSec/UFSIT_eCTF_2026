@@ -338,3 +338,7 @@ wolfssl/
 *.secrets.txt
 **/secrets.h
 uv.lock
+
+attack_package
+reads
+attack_package.zip

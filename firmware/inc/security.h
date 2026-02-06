@@ -15,6 +15,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 
 #define MAX_PERMS 8
 #define PIN_LENGTH 6
