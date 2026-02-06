@@ -44,8 +44,8 @@ bool check_pin(unsigned char *pin) {
     const uint8_t *in  = (const uint8_t *)pin;
 
     // Reduntant checks to secure against fault injection
-    uint8_t eq1 = ct_eq(in, ref, PIN_LEN);
-    uint8_t eq2 = ct_eq(in, ref, PIN_LEN);
+    uint8_t eq1 = ct_eq(in, ref, PIN_LENGTH);
+    uint8_t eq2 = ct_eq(in, ref, PIN_LENGTH);
 
     uint8_t ok = (uint8_t)(eq1 & eq2);
     ok = harden_decision(ok);
