@@ -1,5 +1,5 @@
 
-BEFORE YOU DO ANYTHING RUN THIS!!!!
+IF LOGGING INTO THE SERVER BEFORE YOU DO ANYTHING RUN THIS!!!!
 
 `source .venv/bin/activate`
 
@@ -7,10 +7,12 @@ Use git to checkout branches and download source!
 
 Build source with this commmand:
 
-``
+`./build.sh`
+(when building don't forget to generate secerets if needed or change the permissions in the docker file)
+
 
 Flash source to board with this command!
 
-``
+`python3 flash_firmware.py`
 
 If ANYTHING breaks ping Cole on discord!!!
