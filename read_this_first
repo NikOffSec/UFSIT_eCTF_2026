@@ -1,0 +1,16 @@
+
+BEFORE YOU DO ANYTHING RUN THIS!!!!
+
+`source .venv/bin/activate`
+
+Use git to checkout branches and download source!
+
+Build source with this commmand:
+
+``
+
+Flash source to board with this command!
+
+``
+
+If ANYTHING breaks ping Cole on discord!!!
