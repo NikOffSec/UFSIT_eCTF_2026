@@ -46,6 +46,7 @@ try:
     sleep(3)
     print("--- Sending Start Command ---")
     os.system("uvx ectf hw /dev/ttyACM0 start")
+    print("--- Board Should Now Be Flashed With New Firmware ---")
 
 except KeyboardInterrupt:
     print("!!!FLASH FAILED PING COLE TO FIX!!!")
