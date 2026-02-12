@@ -17,3 +17,8 @@ Flash source to board with this command!
 `python3 flash_firmware_board2.py` <-- flash board connected to /dev/ttyACM2
 
 If ANYTHING breaks ping Cole on discord!!!
+
+NOTE:
+
+Board 1 == /dev/ttyACM0
+Board 2 == /dev/ttyACM2
