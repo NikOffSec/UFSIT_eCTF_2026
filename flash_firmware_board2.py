@@ -2,7 +2,7 @@ try:
     import RPi.GPIO as GPIO
 except:
     print("ERROR: You need to run `source .venv/bin/activate` before you can use this!")
-    print("Go re-read the file `read_this_first`!!!")
+    print("Go re-read the file: read_this_first.txt!!!")
     exit()
 
 from time import sleep
