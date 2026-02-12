@@ -1,4 +1,10 @@
-import RPi.GPIO as GPIO
+try:
+    import RPi.GPIO as GPIO
+except:
+    print("ERROR: You need to run `source .venv/bin/activate` before you can use this!")
+    print("Go re-read the file `read_this_first`!!!")
+    exit()
+
 from time import sleep
 import os
 
