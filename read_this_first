@@ -3,7 +3,7 @@ IF LOGGING INTO THE SERVER BEFORE YOU DO ANYTHING RUN THIS!!!!
 
 `source .venv/bin/activate`
 
-Use git to checkout branches and download source!
+Use git to checkout branches and download source! Git is already connected to the repo with a shared account!
 
 Build source with this commmand:
 
