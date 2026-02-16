@@ -152,14 +152,13 @@ int write(uint16_t pkt_len, uint8_t *buf) {
 
     // UFSIT
     // Added parsing checks to create_file, it can fail if parsing from UART violates struct feilds
-    if(!create_file(
+    if(create_file(
         &curr_file,
         command->group_id,
         command->name,
         command->contents_len,
         command->contents,
-        pkt_len // pass uart pkt len so we can check if it exceeds the size of
-    )) {
+        pkt_len) != 0) {
         print_error("Error creating file");
         return -1;
     }
