@@ -358,7 +358,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             // Check to see if the sending board has the correct group ID permissions to recieve the file
 
-            if(command->permissions[i].receive != PERM_RECEIVE) {
+            if(command->permissions[i].receive != true) {
                 print_error("Permission Check Failed");
                 return -1;
             }
