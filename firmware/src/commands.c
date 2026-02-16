@@ -158,7 +158,10 @@ int write(uint16_t pkt_len, uint8_t *buf) {
         command->contents_len,
         command->contents,
         pkt_len // pass uart pkt len so we can check if it exceeds the size of
-    ));
+    )) {
+        print_error("Error storing file");
+        return -1;
+    }
 
     // Store the file persistently
     if (write_file(command->slot, &curr_file, command->uuid) < 0) {
