@@ -61,6 +61,7 @@ int create_file(
     uint16_t uart_pkt_len
 ) {
 
+    /*
     // TODO: do calculations against uart_pkt_len compared to file size
     // Check provided file size
     if(contents_len < STORED_FILE_SIZE) {
@@ -81,6 +82,18 @@ int create_file(
     dest->group_id = group_id;
     dest->contents_len = contents_len;
 
+    strcpy(dest->name, name);
+    memcpy(dest->contents, contents, contents_len);
+
+    return 0;*/
+
+    memset(dest, 0, sizeof(file_t));
+
+    dest->in_use = FILE_IN_USE;
+    dest->group_id = group_id;
+    dest->contents_len = contents_len;
+
+    // name must be null terminated, and the contents are defined by a length
     strcpy(dest->name, name);
     memcpy(dest->contents, contents, contents_len);
 
