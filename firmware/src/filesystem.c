@@ -68,7 +68,7 @@ int create_file(
     }
 
     // TODO - cole - double check
-    name[31] = '\0';
+    name[MAX_NAME_SIZE - 1] = '\0';
 
     // If the name is null then don't save
     if(name[0] == '\0') {
@@ -81,7 +81,7 @@ int create_file(
     dest->group_id = group_id;
     dest->contents_len = contents_len;
 
-    strncpy(dest->name, name, MAX_NAME_SIZE - 1);
+    strcpy(dest->name, name);
     memcpy(dest->contents, contents, contents_len);
 
     return 0;
