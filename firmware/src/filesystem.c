@@ -64,7 +64,7 @@ int create_file(
     // TODO: do calculations against uart_pkt_len compared to file size
     // Check provided file size
     if(contents_len > STORED_FILE_SIZE) {
-        return -1
+        return -1;
     }
 
     // TODO - cole - double check
