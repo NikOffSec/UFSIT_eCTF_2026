@@ -41,7 +41,7 @@ void generate_list_files(list_response_t *file_list) {
 
             file_list->metadata[file_list->n_files].slot = i;
             file_list->metadata[file_list->n_files].group_id = temp_file.group_id;
-            strcpy(file_list->metadata[file_list->n_files].name, (char *)&temp_file.name);
+            strncpy(file_list->metadata[file_list->n_files].name, (char *)&temp_file.name, MAX_NAME_SIZE - 1);
             file_list->n_files++;
         }
     }
@@ -98,12 +98,19 @@ int read(uint16_t pkt_len, uint8_t *buf) {
     }
 
     // zeroizing memory is a pretty good practice
+
     memset(&file_info, 0, sizeof(read_response_t));
 
     if (read_file(command->slot, &curr_file) < 0) {
         print_error("Failed to read file");
         return -1;
     }
+    
+    // TODO - UFSIT - COLE - check
+    if(strlen(curr_file.name) > MAX_NAME_SIZE) {
+        return -1;
+    }
+
     // copy structure of the persistent file
     memcpy(file_info.name, &curr_file.name, strlen(curr_file.name));
     memcpy(file_info.contents, &curr_file.contents, curr_file.contents_len);
@@ -142,13 +149,16 @@ int write(uint16_t pkt_len, uint8_t *buf) {
         return -1;
     }
 
-    create_file(
+    // UFSIT
+    // Added parsing checks to create_file, it can fail if parsing from UART violates struct feilds
+    if(!create_file(
         &curr_file,
         command->group_id,
         command->name,
         command->contents_len,
-        command->contents
-    );
+        command->contents,
+        pkt_len // pass uart pkt len so we can check if it exceeds the size of
+    ));
 
     // Store the file persistently
     if (write_file(command->slot, &curr_file, command->uuid) < 0) {
@@ -227,6 +237,10 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
     list_response_t final_list_buf;
     uint16_t len_recv_msg;
 
+    // I don't think this needs to be modified at all - Cole
+    // TODO - check to see if the interegate command should be sending over a pin
+    // I don't think it needs to
+
     // pin check
     if (!check_pin(command->pin)) {
         print_error("Invalid pin");
@@ -236,8 +250,8 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
     // request the file list from the neighboring device
     write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, NULL, 0);
 
-    // set essentially no limit to the receive message size
-    len_recv_msg = 0xffff;
+    // UFSIT - cole - check to make sure that this is right
+    len_recv_msg = sizeof(list_response_t);
 
     // recieve the response message
     read_packet(TRANSFER_INTERFACE, &cmd, &final_list_buf, &len_recv_msg);
@@ -245,7 +259,7 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
         print_error("Opcode mismatch");
         return -1;
     }
-
+    
     // return the final list to the user
     write_packet(CONTROL_INTERFACE, INTERROGATE_MSG, &final_list_buf, len_recv_msg);
     return 0;
@@ -273,14 +287,19 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
     switch (cmd) {
         case INTERROGATE_MSG:
+
+            /*
+            https://rules.ectf.mitre.org/2026/specs/host_interface.html#interrogate-files
+            This is a pin protected function. The HSM should reach out via UART1 to a neighbor HSM to receive a list of files on that device. The interrogate files functionality must return a list of all files that the neighbor HSM contains for which the local HSM has receive permissions. The body of the response will contain a list of files and their associated metadata. Communication between the two devices may be design-specific.
+            */
+
+            // TODO - INTERROGATE should send over the persmissions of the device making the request
+
             // zeroize the buffers we will use
             memset(&file_list, 0, sizeof(file_list));
 
             // generate a list of files for the other device
             generate_list_files(&file_list);
-
-            // TODO: the reference design does not implement *ANY* security
-            // you will want to add something here to comply with SR1
 
             // send the list of files on this device
             write_length = LIST_PKT_LEN(file_list.n_files);
@@ -288,13 +307,27 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             break;
         case RECEIVE_MSG:
             // get the request
+            /*
+            https://rules.ectf.mitre.org/2026/specs/host_interface.html#receive-file
+            This is a pin protected function. The HSM should reach out via UART1 to a neighbor HSM to receive a file from that device. If the HSM has permissions to receive the group, the HSM should write the file to the device.
+            */
+
             command = (receive_request_t *)uart_buf;
 
             // TODO: the reference design does not implement *ANY* security
             // you will want to add something here to comply with SR1
+            // I think group ID parsing goes here??? Back by ed25519 keys.
 
             // if this read fails, the other device will not receive a response and
             // may need to be reset before further testing can occur
+            
+
+            // Sanity checking
+            if (command->slot > MAX_FILE_COUNT) {
+                print_error("LISTEN: recv a slot higher then number of possible slots");
+                return -1;
+            }
+
             if (read_file(command->slot, &recv_resp.file) < 0) {
                 print_error("Failed to read file");
                 return -1;
@@ -303,6 +336,30 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             metadata = get_file_metadata(command->slot);
             if (metadata == NULL) {
                 print_error("Getting metadata failed");
+                return -1;
+            }
+
+            // Find which group ID the file belongs to
+            int i = 0;
+
+            // Check to see if the sending board has that group ID
+            for (; i <= MAX_PERMS ; i++) {
+                
+                // If we have looped through every loop element and it doesn't have it, then the board doesn't have the right group to read the file so exit
+                if (i == MAX_PERMS) {
+                    print_error("The board did not have the right group to access the file");
+                    return -1;
+                }
+
+                if(command->permissions[i].group_id == recv_resp.file.group_id) {
+                    break;
+                }
+            }
+
+            // Check to see if the sending board has the correct group ID permissions to recieve the file
+
+            if(command->permissions[i].receive != PERM_RECEIVE) {
+                print_error("Permission Check Failed");
                 return -1;
             }
 
