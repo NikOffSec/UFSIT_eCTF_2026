@@ -33,5 +33,8 @@ bool validate_permission(uint16_t group_id, permission_enum_t perm) {
     // This function currently does nothing. Your team should add the
     // appropriate security checks here to implement the security
     // requirements.
+
+    
+
     return true;
 }
