@@ -13,6 +13,7 @@
 #include "security.h"
 #include "host_messaging.h"
 #include "secrets.h"
+#include "simple_crypto.h"
 
 // A constant time comparison function
 // Returns 0 if they are not equal, returns 1 if they are
@@ -44,8 +45,8 @@ bool check_pin(unsigned char *pin) {
     const uint8_t *in  = (const uint8_t *)pin;
 
     // Reduntant checks to secure against fault injection
-    uint8_t eq1 = ct_eq(in, ref, PIN_LEN);
-    uint8_t eq2 = ct_eq(in, ref, PIN_LEN);
+    uint8_t eq1 = ct_eq(in, ref, PIN_LENGTH);
+    uint8_t eq2 = ct_eq(in, ref, PIN_LENGTH);
 
     uint8_t ok = (uint8_t)(eq1 & eq2);
     ok = harden_decision(ok);
@@ -58,10 +59,25 @@ bool validate_permission(uint16_t group_id, permission_enum_t perm) {
 
     sprintf(output_buf, "Checking %c permissions for group: %hx\n", perm, group_id);
     print_debug(output_buf);
+    for (uint8_t i = 0; i < MAX_PERMS; i++) {
+        // Convention: unused slots have group_id == 0
+        if (global_permissions[i].group_id == 0) {
+            continue;
+        }
 
-    // TODO: the reference design doesn't implement *ANY* security.
-    // This function currently does nothing. Your team should add the
-    // appropriate security checks here to implement the security
-    // requirements.
-    return true;
+        if (global_permissions[i].group_id == group_id) {
+            switch (perm) {
+                case PERM_READ:
+                    return global_permissions[i].read;
+                case PERM_WRITE:
+                    return global_permissions[i].write;
+                case PERM_RECEIVE:
+                    return global_permissions[i].receive;
+                default:
+                    return false;
+            }
+        }
+    }
+    // Group not found => deny by default
+    return false;
 }
