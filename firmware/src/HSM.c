@@ -126,6 +126,10 @@ void init() {
     init_fs();
 }
 
+void trng_init() {
+    print_debug("I'm the TRNG Unit! I don't work :| \n");
+}
+
 /**********************************************************
  *********************** MAIN LOOP ************************
  **********************************************************/
@@ -138,6 +142,7 @@ int main(void) {
 
     // initialize the device
     init();
+    trng_init();
 
     // process commands forever
     while (1) {
