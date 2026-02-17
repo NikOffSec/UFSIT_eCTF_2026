@@ -142,7 +142,7 @@ int main(void) {
 
     // initialize the device
     init();
-    trng_init();
+    //trng_init();
 
     // process commands forever
     while (1) {
@@ -188,6 +188,8 @@ int main(void) {
             // Print the boot flag
             // TODO: Remove this from your design
             boot_flag();
+
+            trng_init();
 
             STATUS_LED_OFF();
             list(pkt_len, uart_buf);
