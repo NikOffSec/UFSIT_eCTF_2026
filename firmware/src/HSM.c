@@ -25,6 +25,8 @@
 #include "status_led.h"
 #include "simple_uart.h"
 
+#include "simple_trng.h"
+
 /* Code between this #ifdef and the subsequent #endif will
 *  be ignored by the compiler if CRYPTO_EXAMPLE is not set in
 *  the Makefile. */
@@ -124,10 +126,6 @@ void init() {
     SYSCFG_DL_init();
 
     init_fs();
-}
-
-void trng_init() {
-    print_debug("I'm the TRNG Unit! I don't work :| \n");
 }
 
 /**********************************************************
