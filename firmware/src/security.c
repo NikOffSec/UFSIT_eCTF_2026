@@ -12,6 +12,7 @@
  */
 #include "security.h"
 #include "host_messaging.h"
+#include "secrets.h"
 
 bool check_pin(unsigned char *pin) {
     print_debug("Checking PIN\n");
