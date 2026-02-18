@@ -4,7 +4,7 @@ void trng_init() {
     print_debug("Awakening the TRNG module\n");
 
     DL_TRNG_enablePower(TRNG);
-    DL_TRNG_setClockDivider(DL_TRNG_CLOCK_DIVIDE.DL_TRNG_CLOCK_DIVIDE_4);
+    DL_TRNG_setClockDivider(TRNG,TRNG_CLKDIVIDE_RATIO_DIV_BY_8);
     DL_TRNG_disableInterrupt(TRNG, 0xF);
     DL_TRNG_sendCommand(TRNG, DL_TRNG_CMD.DL_TRNG_CMD_NORM_FUNC);
     while(!(DL_TRNG_isCommandDone(TRNG)));
