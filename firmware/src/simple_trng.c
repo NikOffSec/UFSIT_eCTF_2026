@@ -27,8 +27,9 @@ void trng_init() {
     // Wait for the IRQ_CMD_DONE interrupt flag to be set, indicating that the digital self-test has completed.
     while(!(DL_TRNG_isCommandDone(TRNG)));
     //  b. Check that all 8 digital tests passed be ensuring the DIG_TEST field in the TEST_RESULTS register are set (DIG_TEST=0xFF).
-    if (DL_TRNG_getDigitalHealthTestResults(TRNG) != DL_TRNG_DIGITAL_HEALTH_TEST_SUCCESS) {
-        snprintf(output_buf, sizeof(output_buf)-1, "Digital Block start-up self-test failed TEST_RESULTS: %x\n", DL_TRNG_getDigitalHealthTestResults(TRNG)); print_debug(output_buf);
+    unsigned int temp = DL_TRNG_getDigitalHealthTestResults(TRNG);
+    if (temp != DL_TRNG_DIGITAL_HEALTH_TEST_SUCCESS) {
+        snprintf(output_buf, sizeof(output_buf)-1, "Digital Block start-up self-test failed TEST_RESULTS: %08x\n", temp); print_debug(output_buf);
     }
     //  c. After the digital test, the TRNG will return to the NORM_FUNC state automatically.
 
