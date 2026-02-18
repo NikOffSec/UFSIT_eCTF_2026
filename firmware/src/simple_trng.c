@@ -28,6 +28,7 @@ void trng_init() {
     while(!(DL_TRNG_isCommandDone(TRNG)));
     //  b. Check that all 8 digital tests passed be ensuring the DIG_TEST field in the TEST_RESULTS register are set (DIG_TEST=0xFF).
     unsigned int temp = DL_TRNG_getDigitalHealthTestResults(TRNG);
+    delay_cycles(10000); // 8 tests * 1,024 cycles/test rounded up to 10,000
     if (temp != DL_TRNG_DIGITAL_HEALTH_TEST_SUCCESS) {
         snprintf(output_buf, sizeof(output_buf)-1, "Digital Block start-up self-test failed TEST_RESULTS: %08x\n", temp); print_debug(output_buf);
     }
