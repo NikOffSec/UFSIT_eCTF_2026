@@ -2,26 +2,42 @@
 #include "host_messaging.h"
 
 void trng_init() {
-    print_debug("Awakening the TRNG module\n");
-
-    DL_TRNG_enablePower(TRNG);
-    DL_TRNG_setClockDivider(TRNG,TRNG_CLKDIVIDE_RATIO_DIV_BY_8);
-    DL_TRNG_disableInterrupt(TRNG, 0xF);
-    DL_TRNG_sendCommand(TRNG, DL_TRNG_CMD_NORM_FUNC);
-    while(!(DL_TRNG_isCommandDone(TRNG)));
 
     char output_buf[128] = {0};
-    sprintf(output_buf, "Command read from TRNG: %d\n", DL_TRNG_getIssuedCommand(TRNG));
-    print_debug(output_buf);
+
+    print_debug("Awakening the TRNG module\n");
+
+    // 1. Enable the TRNG by setting the ENABLE bit together with the KEY in the TRNG PWREN register.
+    DL_TRNG_enablePower(TRNG);
+    
+    // 2. Configure the TRNG clock divider to ensure that the TRNG functional clock is within the allowable range (10MHz typical, see the device data sheet for additional detail). The clock divider is configured by programming the required value to the RATIO field of the CLKDIVIDE register. As an example, if MCLK is 80MHz, the RATIO field shall be set to 0x7 (divide-by-8) to provide a 10MHz functional clock to the TRNG module.
+    DL_TRNG_setClockDivider(TRNG, TRNG_CLKDIVIDE_RATIO_DIV_BY_8);
+    
+    // 3. Verify that the TRNG interrupts are disabled (interrupt mask bits are cleared to mask interrupts).
+    DL_TRNG_disableInterrupt(TRNG, 0xF);
+    
+    // 4. Move the TRNG from the default OFF state to the NORM_FUNC state by writing the NORM_FUNC command (0x3) to the CMD field in the CTL register of the TRNG.
+    DL_TRNG_sendCommand(TRNG, DL_TRNG_CMD_NORM_FUNC);
+    // Wait for the IRQ_CMD_DONE interrupt flag to be set, indicating that the CMD completed.
+    while(!(DL_TRNG_isCommandDone(TRNG)));
+
+    // 5. Run the digital block start-up self-test routine to ensure the TRNG digital is functioning properly:
+    //  a. Move the TRNG from the NORM_FUNC state to the TEST_DIG state by writing the TEST_DIG command (0x1) to the CMD field in the CTL register.
+    DL_TRNG_sendCommand(TRNG, DL_TRNG_CMD_PWRUP_DIG)
+    // Wait for the IRQ_CMD_DONE interrupt flag to be set, indicating that the digital self-test has completed.
+    while(!(DL_TRNG_isCommandDone(TRNG)));
+    //  b. Check that all 8 digital tests passed be ensuring the DIG_TEST field in the TEST_RESULTS register are set (DIG_TEST=0xFF).
+    if (DL_TRNG_getDigitalHealthTestResults(TRNG) != DL_TRNG_DIGITAL_HEALTH_TEST_SUCCESS) {
+        snprintf(output_buf, sizeof(output_buf)-1, "Digital Block start-up self-test failed TEST_RESULTS: %x\n", DL_TRNG_getDigitalHealthTestResults(TRNG)); print_debug(output_buf);
+    }
+    //  c. After the digital test, the TRNG will return to the NORM_FUNC state automatically.
+
+    
+
+
+    snprintf(output_buf, sizeof(output_buf)-1, "Command read from TRNG: %d\n", DL_TRNG_getIssuedCommand(TRNG)); print_debug(output_buf);
 
 /*
-5. Run the digital block start-up self-test routine to ensure the TRNG digital is functioning properly:
-a. Move the TRNG from the NORM_FUNC state to the TEST_DIG state by writing the TEST_DIG
-command (0x1) to the CMD field in the CTL register. Wait for the IRQ_CMD_DONE interrupt flag to
-be set, indicating that the digital self-test has completed.
-b. Check that all 8 digital tests passed be ensuring the DIG_TEST field in the TEST_RESULTS register are
-set (DIG_TEST=0xFF).
-c. After the digital test, the TRNG will return to the NORM_FUNC state automatically.
 6. Run the analog block start-up self-test routine to ensure that the TRNG analog is functioning properly:
 a. Move the TRNG from the NORM_FUNC state to the TEST_ANA state by writing the TEST_ANA
 command (0x2) to the CMD field in the CTL register. Wait for the IRQ_CMD_DONE interrupt flag to be
