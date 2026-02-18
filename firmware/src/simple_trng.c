@@ -1,4 +1,5 @@
 #include "simple_trng.h"
+#include "host_messaging.h"
 
 void trng_init() {
     print_debug("Awakening the TRNG module\n");
@@ -9,7 +10,9 @@ void trng_init() {
     DL_TRNG_sendCommand(TRNG, DL_TRNG_CMD_NORM_FUNC);
     while(!(DL_TRNG_isCommandDone(TRNG)));
 
-    print_debug("Command read from TRNG: %d\n",DL_TRNG_getIssuedCommand(TRNG));
+    char output_buf[128] = {0};
+    sprintf(output_buf, "Command read from TRNG: %d\n", DL_TRNG_getIssuedCommand(TRNG));
+    print_debug(output_buf);
 
 /*
 5. Run the digital block start-up self-test routine to ensure the TRNG digital is functioning properly:
