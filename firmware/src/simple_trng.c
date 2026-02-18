@@ -23,7 +23,7 @@ void trng_init() {
 
     // 5. Run the digital block start-up self-test routine to ensure the TRNG digital is functioning properly:
     //  a. Move the TRNG from the NORM_FUNC state to the TEST_DIG state by writing the TEST_DIG command (0x1) to the CMD field in the CTL register.
-    DL_TRNG_sendCommand(TRNG, DL_TRNG_CMD_PWRUP_DIG)
+    DL_TRNG_sendCommand(TRNG, DL_TRNG_CMD_TEST_DIG);
     // Wait for the IRQ_CMD_DONE interrupt flag to be set, indicating that the digital self-test has completed.
     while(!(DL_TRNG_isCommandDone(TRNG)));
     //  b. Check that all 8 digital tests passed be ensuring the DIG_TEST field in the TEST_RESULTS register are set (DIG_TEST=0xFF).
@@ -32,7 +32,7 @@ void trng_init() {
     }
     //  c. After the digital test, the TRNG will return to the NORM_FUNC state automatically.
 
-    
+
 
 
     snprintf(output_buf, sizeof(output_buf)-1, "Command read from TRNG: %d\n", DL_TRNG_getIssuedCommand(TRNG)); print_debug(output_buf);
