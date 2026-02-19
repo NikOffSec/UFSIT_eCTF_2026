@@ -37,9 +37,8 @@ void trng_init() {
         snprintf(output_buf, sizeof(output_buf)-1, "Digital Block start-up self-test succeed TEST_RESULTS: %08x\n", temp); print_debug(output_buf);
     }
     //  c. After the digital test, the TRNG will return to the NORM_FUNC state automatically.
-
-
-
+    DL_TRNG_getCurrentState(TRNG);
+    snprintf(output_buf, sizeof(output_buf)-1, "State after digi test TRNG: %d\n", DL_TRNG_getCurrentState(TRNG)); print_debug(output_buf);
 
     snprintf(output_buf, sizeof(output_buf)-1, "Command read from TRNG: %d\n", DL_TRNG_getIssuedCommand(TRNG)); print_debug(output_buf);
 
