@@ -27,7 +27,7 @@
 typedef unsigned char pin_t[6];
 
 // can support the largest struct size message size of the device for in place encryption/decryption
-#define MAX_COMMAND_SIZE 8288
+#define MAX_COMMAND_SIZE 8272
 uint8_t tmp_command_buffer[MAX_COMMAND_SIZE];
 
 #define MAX_MSG_SIZE sizeof(write_command_t)
@@ -85,7 +85,7 @@ typedef struct { // sent by the board that has the file to the baord that wants 
     uint8_t hash[HASH_SIZE]; // proof that it's legit
 } receive_request_setup_t;
 
-// 96 bytes
+// 80 bytes
 typedef struct {  // sent by the board that wants the file to the board that has it
     slot_t slot;
     group_permission_t permissions[MAX_PERMS];
@@ -95,8 +95,7 @@ typedef struct {  // sent by the board that wants the file to the board that has
     uint8_t padding[7];
 } receive_request_t;
 
-// 8288 bytes (make max command len)
-// 518 AES blocks
+// 8272 bytes (make max command len)
 typedef struct {
     uint8_t uuid[UUID_SIZE];
     uint32_t random_number;
