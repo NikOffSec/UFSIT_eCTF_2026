@@ -11,7 +11,7 @@
  * @copyright Copyright (c) 2026 The MITRE Corporation
  */
 
-//#if CRYPTO_EXAMPLE
+#if CRYPTO_EXAMPLE
 #ifndef ECTF_CRYPTO_H
 #define ECTF_CRYPTO_H
 
@@ -71,4 +71,4 @@ int decrypt_sym(uint8_t *ciphertext, size_t len, uint8_t *key, uint8_t *plaintex
 int hash(void *data, size_t len, uint8_t *hash_out);
 
 #endif // CRYPTO_EXAMPLE
-//#endif // ECTF_CRYPTO_H
+#endif // ECTF_CRYPTO_H
