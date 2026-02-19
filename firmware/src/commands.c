@@ -196,7 +196,7 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     uint32_t setup_random_number = 0;
     uint32_t internal_random_number = trng_generate();
     int ret;
-    int read_length;
+    uint16_t read_length;
 
     if (!check_pin(command->pin)) {
         print_error("Invalid pin");
@@ -228,7 +228,7 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
 
     char testing_buf[100] = {0};
                 
-    snprintf(testing_buf, sizeof(testing_buf)-1, "command_setup.random_number == %d", command_setup->random_number);
+    snprintf(testing_buf, sizeof(testing_buf)-1, "command_setup.random_number == %d", command_setup.random_number);
     print_debug(testing_buf);
 
     // This int is used to avoid replay attacks
@@ -393,11 +393,11 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             decrypt_sym(uart_buf, sizeof(receive_request_t), AES_KEY, tmp_command_buffer);
 
-            hash((void*)&tmp_command_buffer, sizeof(receive_request_t) - HASH_SIZE - 7, (uint8_t*)hash);
+            hash((void*)&tmp_command_buffer, sizeof(receive_request_t) - HASH_SIZE - 7, (uint8_t*)&hash);
 
             command = (receive_request_t*)&tmp_command_buffer;
 
-            if(memcmp(command_setup->hash, hash, HASH_SIZE) != 0) {
+            if(memcmp(command->hash, hash, HASH_SIZE) != 0) {
                 print_error("LISTEN: Hash check failed!");
                 return -1;
             }
