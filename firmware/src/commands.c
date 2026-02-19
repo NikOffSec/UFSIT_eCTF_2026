@@ -214,7 +214,7 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     // Encrypt the request message
     encrypt_sym((void*)&request_setup, sizeof(request_setup), AES_KEY, tmp_command_buffer);
 
-    write_packet(TRANSFER_INTERFACE, RECEIVE_SETUP_MSG, (void *)&request_setup, sizeof(receive_request_setup_t));
+    write_packet(TRANSFER_INTERFACE, RECEIVE_SETUP_MSG, (void *)&tmp_command_buffer, sizeof(receive_request_setup_t));
 
     // zeroize the buffers we will use
     memset(&recv_resp, 0, sizeof(recv_resp));
