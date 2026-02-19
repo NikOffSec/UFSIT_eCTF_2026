@@ -17,6 +17,7 @@
 #include "security.h"
 #include "stdint.h"
 #include "simple_flash.h"
+#include "simple_crypto.h"
 #include "filesystem.h"
 #include "secrets.h"
 
@@ -73,14 +74,26 @@ typedef struct {
     slot_t write_slot;
 } receive_command_t;
 
-typedef struct {
+// Ensrue that it is a multiple of BLOCK_SIZE
+typedef struct { // sent by the board that has the file to the baord that wants it
+    uint32_t random_number;
+    uint8_t hash[HASH_SIZE]; // proof that it's legit
+} receive_request_setup_t;
+
+// Ensrue that it is a multiple of BLOCK_SIZE
+typedef struct {  // sent by the board that wants the file to the board that has it
     slot_t slot;
     group_permission_t permissions[MAX_PERMS];
+    uint32_t setup_random_number; // avoid replay attacks by proving you're legit
+    uint32_t internal_random_number; // make the HSM with the file also send you a new random number, TODO - probably not needed
+    uint8_t hash[HASH_SIZE];
 } receive_request_t;
 
 typedef struct {
     uint8_t uuid[UUID_SIZE];
+    uint32_t random_number;
     file_t file;
+    uint8_t hash[HASH_SIZE];
 } receive_response_t;
 
 typedef struct {

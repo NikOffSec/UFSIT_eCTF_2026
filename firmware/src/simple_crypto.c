@@ -102,8 +102,11 @@ int decrypt_sym(uint8_t *ciphertext, size_t len, uint8_t *key, uint8_t *plaintex
  * @return 0 on success, non-zero for other error
  */
 int hash(void *data, size_t len, uint8_t *hash_out) {
-    // Pass values to hash
-    return wc_Md5Hash((uint8_t *)data, len, hash_out);
+    // Pass values to hash wc_Sha224Hash
+    // UFSIT - use a stronger hash function to avoid collisions
+    // TODO - hash speedtests
+    return wc_Sha224Hash((uint8_t *)data, len, hash_out);
+    //return wc_Md5Hash((uint8_t *)data, len, hash_out);
 }
 
 #endif
