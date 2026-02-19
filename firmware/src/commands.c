@@ -19,6 +19,10 @@
 // extern file_t hsm_status[MAX_FILE_COUNT];
 static file_t current_file;
 
+int trng_generate(){
+    return 1;
+}
+
 /**********************************************************
  ******************** HELPER FUNCTIONS ********************
  **********************************************************/
@@ -184,6 +188,7 @@ int write(uint16_t pkt_len, uint8_t *buf) {
 */
 int receive(uint16_t pkt_len, uint8_t *buf) {
     receive_command_t *command = (receive_command_t *)buf;
+    receive_request_setup_t request_setup;
     receive_request_t request;
     receive_response_t recv_resp;
     msg_type_t cmd;
@@ -195,6 +200,22 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
         return -1;
     }
 
+    // First, tell the HSM you are communicating with that you want to start a recieve file transfer
+    
+    // zero buffer
+    memset(&request_setup, 0, sizeof(request_setup));
+
+    // generate session int so reply attacks don't work
+    request_setup.random_number = trng_generate();
+
+    // Calcuate the hash of the int and store it in the struct
+    hash(request_setup, 4, &request_setup.hash);
+
+    // Encrypt the request message
+    encrypt_sym(&request_setup, sizeof(request_setup), AES_KEY, tmp_command_buffer);
+
+    write_packet(TRANSFER_INTERFACE, RECEIVE_SETUP_MSG, (void *)&request_setup, sizeof(receive_request_setup_t));
+
     // zeroize the buffers we will use
     memset(&recv_resp, 0, sizeof(recv_resp));
     memset(&request, 0, sizeof(request));
@@ -203,10 +224,13 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     request.slot = command->read_slot;
     memcpy(&request.permissions, &global_permissions, sizeof(group_permission_t) * MAX_PERMS);
 
+    // Transfer the 
+
     // request the file from the neighboring device
     write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&request, sizeof(receive_request_t));
 
     // set essentially no limit to the receive message size
+    // TODO - fix
     len_recv_msg = 0xffff;
 
     // recieve the response message
@@ -279,6 +303,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
     pkt_len_t write_length, read_length;
     list_response_t file_list;
     receive_request_t *command;
+    receive_request_setup_t *command_setup;
     receive_response_t recv_resp;
     const filesystem_entry_t *metadata;
 
@@ -308,14 +333,27 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             write_length = LIST_PKT_LEN(file_list.n_files);
             write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, &file_list, write_length);
             break;
-        case RECEIVE_MSG:
+        case RECEIVE_SETUP_MSG: // was RECEIVE_MSG
             // get the request
             /*
             https://rules.ectf.mitre.org/2026/specs/host_interface.html#receive-file
             This is a pin protected function. The HSM should reach out via UART1 to a neighbor HSM to receive a file from that device. If the HSM has permissions to receive the group, the HSM should write the file to the device.
             */
 
-            command = (receive_request_t *)uart_buf;
+            // first decrypt the uart_buf
+            decrypt_sym(uart_buf, sizeof(receive_request_setup_t), AES_KEY, tmp_command_buffer);
+
+
+            command_setup = (receive_request_t *)tmp_command_buffer;
+
+
+            char testing_buf[100] = {0};
+                
+            snprintf(testing_buf, sizeof(testing_buf)-1, "command_setup.random_number == %d", command_setup.random_number);
+            print_debug(testing_buf);
+
+
+            while(1);
 
             // TODO: the reference design does not implement *ANY* security
             // you will want to add something here to comply with SR1

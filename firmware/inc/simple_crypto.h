@@ -27,6 +27,10 @@
 //#define HASH_SIZE 28
 #define HASH_SIZE MD5_DIGEST_SIZE
 
+// TEMP KEY
+// Remove once gen secrets is setup to generate this
+uint8_t AES_KEY[16] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}
+
 /******************************** FUNCTION PROTOTYPES ********************************/
 /** @brief Encrypts plaintext using a symmetric cipher
  *
