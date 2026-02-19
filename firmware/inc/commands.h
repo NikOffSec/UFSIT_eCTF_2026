@@ -21,6 +21,8 @@
 #include "filesystem.h"
 #include "secrets.h"
 
+extern uint8_t AES_KEY[16];
+
 #define pkt_len_t uint16_t
 
 // Pin will be 6 hex characters 0-9,a-f
