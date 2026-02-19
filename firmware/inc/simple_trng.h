@@ -4,5 +4,5 @@
 
 #include "host_messaging.h"
 
-void trng_init();
+int trng_init();
 
