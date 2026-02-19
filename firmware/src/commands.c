@@ -209,7 +209,7 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     request_setup.random_number = trng_generate();
 
     // Calcuate the hash of the int and store it in the struct
-    hash((void*)&request_setup, 4, &request_setup.hash);
+    hash((void*)&request_setup, 4, (uint8_t*)&request_setup.hash);
 
     // Encrypt the request message
     encrypt_sym((void*)&request_setup, sizeof(request_setup), AES_KEY, tmp_command_buffer);
@@ -349,7 +349,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             char testing_buf[100] = {0};
                 
-            snprintf(testing_buf, sizeof(testing_buf)-1, "command_setup.random_number == %d", command_setup.random_number);
+            snprintf(testing_buf, sizeof(testing_buf)-1, "command_setup.random_number == %d", command_setup->random_number);
             print_debug(testing_buf);
 
 
