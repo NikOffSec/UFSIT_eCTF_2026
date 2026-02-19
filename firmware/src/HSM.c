@@ -126,6 +126,12 @@ void init() {
     SYSCFG_DL_init();
 
     init_fs();
+
+    if(trng_init()) {
+        while(1){
+            print_error("ERROR: TRNG CAN'T INIT");
+        }
+    }
 }
 
 /**********************************************************
@@ -176,28 +182,6 @@ int main(void) {
 
         // Handle list command
         case LIST_MSG:
-
-#ifdef CRYPTO_EXAMPLE
-            // Run the crypto example
-            // TODO: Remove this from your design
-            crypto_example();
-#endif // CRYPTO_EXAMPLE
-
-            // Print the boot flag
-            // TODO: Remove this from your design
-            boot_flag();
-
-            if (trng_init()) {
-                print_debug("TRNG Init Failed! Module is offline.");
-            }
-            else {
-                print_debug("TRNG Init Success! Module is ready for generating.");
-                char testing_buf[100] = {0};
-                for (int i = 0; i < 5; i++) {
-                    snprintf(testing_buf, sizeof(testing_buf)-1, "Rand Number #%d is \"%08x\"", i, trng_generate());
-                    print_debug(testing_buf);
-                }
-            }  
 
             STATUS_LED_OFF();
             list(pkt_len, uart_buf);
