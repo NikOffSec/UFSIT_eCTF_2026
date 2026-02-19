@@ -11,7 +11,7 @@ void trng_init() {
     DL_TRNG_enablePower(TRNG);
     
     // 2. Configure the TRNG clock divider to ensure that the TRNG functional clock is within the allowable range (10MHz typical, see the device data sheet for additional detail). The clock divider is configured by programming the required value to the RATIO field of the CLKDIVIDE register. As an example, if MCLK is 80MHz, the RATIO field shall be set to 0x7 (divide-by-8) to provide a 10MHz functional clock to the TRNG module.
-    DL_TRNG_setClockDivider(TRNG, TRNG_CLKDIVIDE_RATIO_DIV_BY_8);
+    DL_TRNG_setClockDivider(TRNG, TRNG_CLKDIVIDE_RATIO_DIV_BY_2);
     
     // 3. Verify that the TRNG interrupts are disabled (interrupt mask bits are cleared to mask interrupts).
     DL_TRNG_disableInterrupt(TRNG, 0xF);
@@ -27,10 +27,14 @@ void trng_init() {
     // Wait for the IRQ_CMD_DONE interrupt flag to be set, indicating that the digital self-test has completed.
     while(!(DL_TRNG_isCommandDone(TRNG)));
     //  b. Check that all 8 digital tests passed be ensuring the DIG_TEST field in the TEST_RESULTS register are set (DIG_TEST=0xFF).
+    DL_TRNG_clearInterruptStatus(TRNG, DL_TRNG_INTERRUPT_CMD_DONE_EVENT);
+    delay_cycles(100000); // 8 tests * 1,024 cycles/test, testing with 100,000
     unsigned int temp = DL_TRNG_getDigitalHealthTestResults(TRNG);
-    delay_cycles(10000); // 8 tests * 1,024 cycles/test rounded up to 10,000
     if (temp != DL_TRNG_DIGITAL_HEALTH_TEST_SUCCESS) {
         snprintf(output_buf, sizeof(output_buf)-1, "Digital Block start-up self-test failed TEST_RESULTS: %08x\n", temp); print_debug(output_buf);
+    }
+    else {
+        snprintf(output_buf, sizeof(output_buf)-1, "Digital Block start-up self-test succeed TEST_RESULTS: %08x\n", temp); print_debug(output_buf);
     }
     //  c. After the digital test, the TRNG will return to the NORM_FUNC state automatically.
 
