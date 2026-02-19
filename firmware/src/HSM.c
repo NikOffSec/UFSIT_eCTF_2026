@@ -179,10 +179,10 @@ int main(void) {
             // TODO: Remove this from your design
             crypto_example();
 #endif // CRYPTO_EXAMPLE
-
-            // Print the boot flag
-            // TODO: Remove this from your design
-            boot_flag();
+            char testing_buf[100] = {0};
+                
+            snprintf(testing_buf, sizeof(testing_buf)-1, "size of receive_response_t #%d", sizeof(receive_response_t));
+            print_debug(testing_buf);
 
             STATUS_LED_OFF();
             list(pkt_len, uart_buf);
