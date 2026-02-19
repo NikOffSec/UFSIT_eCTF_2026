@@ -188,11 +188,13 @@ int write(uint16_t pkt_len, uint8_t *buf) {
 */
 int receive(uint16_t pkt_len, uint8_t *buf) {
     receive_command_t *command = (receive_command_t *)buf;
-    receive_request_setup_t request_setup;
+    receive_request_setup_t *command_setup;
     receive_request_t request;
     receive_response_t recv_resp;
     msg_type_t cmd;
     uint16_t len_recv_msg;
+    uint32_t setup_random_number = 0;
+    uint32_t internal_random_number = trng_generate();
     int ret;
 
     if (!check_pin(command->pin)) {
@@ -201,33 +203,59 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     }
 
     // First, tell the HSM you are communicating with that you want to start a recieve file transfer
-    
-    // zero buffer
-    memset(&request_setup, 0, sizeof(request_setup));
-
-    // generate session int so reply attacks don't work
-    request_setup.random_number = trng_generate();
-
-    // Calcuate the hash of the int and store it in the struct
-    hash((void*)&request_setup, 4, (uint8_t*)&request_setup.hash);
-
-    // Encrypt the request message
-    encrypt_sym((void*)&request_setup, sizeof(request_setup), AES_KEY, tmp_command_buffer);
-
+    memset(&tmp_command_buffer, 0, sizeof(request_setup));
     write_packet(TRANSFER_INTERFACE, RECEIVE_SETUP_MSG, (void *)&tmp_command_buffer, sizeof(receive_request_setup_t));
+
+    read_packet(TRANSFER_INTERFACE, &cmd, uart_buf, &read_length);
+
+    if(cmd != RECEIVE_SETUP_MSG) {
+        print_error("receive: did not get RECEIVE_SETUP_MSG got something else");
+        return -1;
+    }
+
+    // decrypt the uart_buf
+    decrypt_sym(uart_buf, sizeof(receive_request_setup_t), AES_KEY, tmp_command_buffer);
+
+    command_setup = (receive_request_setup_t *)tmp_command_buffer;
+
+    // MD5 check the number
+    hash((void*)&command_setup, 4, (uint8_t*)&hash);
+
+    if(memcmp(command_setup->hash, hash, HASH_SIZE) != 0) {
+        print_error("RECV: Hash check failed!");
+        return -1;
+    }
+
+    char testing_buf[100] = {0};
+                
+    snprintf(testing_buf, sizeof(testing_buf)-1, "command_setup.random_number == %d", command_setup->random_number);
+    print_debug(testing_buf);
+
+    // This int is used to avoid replay attacks
+    int_from_neighbor = command_setup->random_number;
 
     // zeroize the buffers we will use
     memset(&recv_resp, 0, sizeof(recv_resp));
     memset(&request, 0, sizeof(request));
 
     // prep request to neighbor
+    request.setup_random_number = setup_random_number;
+    request.internal_random_number = internal_random_number;
     request.slot = command->read_slot;
     memcpy(&request.permissions, &global_permissions, sizeof(group_permission_t) * MAX_PERMS);
 
-    // Transfer the 
+    // Calculate the md5 hash of receive_request_t, subtract out the size of the hash and padding
+    hash((void*)&request, sizeof(receive_request_t) - HASH_SIZE - 7, (uint8_t*)&request.hash);
+
+    // Encrypt the receive_request_t command
+    encrypt_sym((void*)&request, sizeof(receive_request_t), AES_KEY, tmp_command_buffer);
 
     // request the file from the neighboring device
-    write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&request, sizeof(receive_request_t));
+    write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&tmp_command_buffer, sizeof(receive_request_t));
+
+    print_debug("WROTE REQUEST PACKET TO TRANSFER INTERFACE");
+
+    while(1);
 
     // set essentially no limit to the receive message size
     // TODO - fix
@@ -303,7 +331,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
     pkt_len_t write_length, read_length;
     list_response_t file_list;
     receive_request_t *command;
-    receive_request_setup_t *command_setup;
+    receive_request_setup_t request_setup;
     receive_response_t recv_resp;
     const filesystem_entry_t *metadata;
     uint8_t hash[HASH_SIZE];
@@ -341,25 +369,41 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             This is a pin protected function. The HSM should reach out via UART1 to a neighbor HSM to receive a file from that device. If the HSM has permissions to receive the group, the HSM should write the file to the device.
             */
 
-            // first decrypt the uart_buf
-            decrypt_sym(uart_buf, sizeof(receive_request_setup_t), AES_KEY, tmp_command_buffer);
+            // zero buffer
+            memset(&request_setup, 0, sizeof(request_setup));
 
+            // generate session int so reply attacks don't work
+            request_setup.random_number = trng_generate();
 
-            command_setup = (receive_request_setup_t *)tmp_command_buffer;
+            // Calcuate the hash of the int and store it in the struct
+            hash((void*)&request_setup, 4, (uint8_t*)&request_setup.hash);
 
-            // MD5 check the number
-            hash((void*)&command_setup, 4, (uint8_t*)&hash);
+            // Encrypt the request message
+            encrypt_sym((void*)&request_setup, sizeof(request_setup), AES_KEY, tmp_command_buffer);
 
-            if(memcmp(command_setup->hash, hash, HASH_SIZE) != 0) {
-                print_error("1. Hash check failed!");
+            write_packet(TRANSFER_INTERFACE, RECEIVE_SETUP_MSG, (void *)&tmp_command_buffer, sizeof(receive_request_setup_t));
+
+            // Get back the message from the user where they 
+            read_packet(TRANSFER_INTERFACE, &cmd, uart_buf, &read_length);
+
+            if(cmd != RECEIVE_MSG) {
+                print_error("receive: did not get RECEIVE_SETUP_MSG got something else");
+                return -1;
             }
 
-            char testing_buf[100] = {0};
-                
-            snprintf(testing_buf, sizeof(testing_buf)-1, "command_setup.random_number == %d", command_setup->random_number);
-            print_debug(testing_buf);
+            decrypt_sym(uart_buf, sizeof(receive_request_t), AES_KEY, tmp_command_buffer);
 
+            hash((void*)&tmp_command_buffer, sizeof(receive_request_t) - HASH_SIZE - 7, (uint8_t*)hash);
 
+            command = (receive_request_t*)&tmp_command_buffer;
+
+            if(memcmp(command_setup->hash, hash, HASH_SIZE) != 0) {
+                print_error("LISTEN: Hash check failed!");
+                return -1;
+            }
+
+            print_debug("HASH CHECK WENT THROUGH");
+            
             while(1);
 
             // TODO: the reference design does not implement *ANY* security
