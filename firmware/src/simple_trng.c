@@ -93,6 +93,10 @@ int trng_init() {
     return 0;
 }
 
-//unsigned int trng_generate() {
-
-//}
+unsigned int trng_generate() {
+    unsigned int temp = -1;
+    while(!(DL_TRNG_isCaptureReady(TRNG)));
+    temp = DL_TRNG_getCapture(TRNG);
+    DL_TRNG_clearInterruptStatus(TRNG, DL_TRNG_INTERRUPT_CAPTURE_RDY_EVENT);
+    return temp;
+}

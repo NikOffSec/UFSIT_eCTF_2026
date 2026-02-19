@@ -187,7 +187,17 @@ int main(void) {
             // TODO: Remove this from your design
             boot_flag();
 
-            trng_init();
+            if (trng_init()) {
+                print_debug("TRNG Init Failed! Module is offline.\n");
+            }
+            else {
+                print_debug("TRNG Init Success! Module is ready for generating.\n");
+                char testing_buf[100] = {0};
+                for (int i = 0; i < 5; i++) {
+                    snprintf(testing_buf, sizeof(testing_buf)-1, "Rand Number #%d is \"%08x\"\n", i, trng_generate());
+                    print_debug(testing_buf);
+                }
+            }  
 
             STATUS_LED_OFF();
             list(pkt_len, uart_buf);

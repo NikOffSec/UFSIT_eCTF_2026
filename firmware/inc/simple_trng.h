@@ -5,4 +5,4 @@
 #include "host_messaging.h"
 
 int trng_init();
-
+unsigned int trng_generate();
