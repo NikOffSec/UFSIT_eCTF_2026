@@ -1,7 +1,7 @@
 #include "simple_trng.h"
 #include "host_messaging.h"
 
-void trng_init() {
+int trng_init() {
 
     char output_buf[128] = {0};
 
@@ -29,7 +29,7 @@ void trng_init() {
     while(!(DL_TRNG_isCommandDone(TRNG)));
     DL_TRNG_clearInterruptStatus(TRNG, DL_TRNG_INTERRUPT_CMD_DONE_EVENT);
     //  b. Check that all 8 digital tests passed be ensuring the DIG_TEST field in the TEST_RESULTS register are set (DIG_TEST=0xFF).
-    delay_cycles(100000); // 8 tests * 1,024 cycles/test, testing with 100,000
+    delay_cycles(1024*8); // 8 tests * 1,024 cycles/test, testing with 100,000
     unsigned int temp = DL_TRNG_getDigitalHealthTestResults(TRNG);
     if (temp != DL_TRNG_DIGITAL_HEALTH_TEST_SUCCESS) {
         snprintf(output_buf, sizeof(output_buf)-1, "Digital Block start-up self-test failed TEST_RESULTS: %08x\n", temp); print_debug(output_buf);
@@ -78,7 +78,7 @@ IRQ_HEALTH_FAIL interrupt. Then, transition the TRNG to the OFF state by sending
 to step #2 to power up the TRNG again to test if sufficient entropy is again available.
 */
 
-    return;
+    return 0;
 }
 
 //unsigned int trng_generate() {
