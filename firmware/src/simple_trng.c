@@ -63,14 +63,16 @@ int trng_init() {
     }
 
     snprintf(output_buf, sizeof(output_buf)-1, "State after analog test TRNG: %d\n", DL_TRNG_getCurrentState(TRNG)); print_debug(output_buf);
-    
-    return 0;
 
     // 7. Configure the TRNG for normal operation after running start-up self-tests:
     //  a. Clear the IRQ_CAPTURED_RDY_IRQ status by setting the corresponding ICLR bit, as this may have been set during the self-tests performed earlier.
     DL_TRNG_clearInterruptStatus(TRNG, DL_TRNG_INTERRUPT_CAPTURE_RDY_EVENT);
-    //  b. Set the decimation rate to the desired value by programming the new decimation rate into the DECIM_RATE field of the CTL register, followed by sending the NORM_FUNC command again (by writing 0x3 to the CMD field in the CTL register). A decimation rate of 4 (DECIM_RATE=0x3) or greater is recommended.
-    // TODO: LOOK INTO THIS LATER
+    //  b. Set the decimation rate to the desired value by programming the new decimation rate into the DECIM_RATE field of the CTL register, 
+    DL_TRNG_setDecimationRate(TRNG, DL_TRNG_DECIMATION_RATE_4);
+    //  followed by sending the NORM_FUNC command again (by writing 0x3 to the CMD field in the CTL register). A decimation rate of 4 (DECIM_RATE=0x3) or greater is recommended.
+    DL_TRNG_sendCommand(TRNG, DL_TRNG_CMD_NORM_FUNC);
+    while(!(DL_TRNG_isCommandDone(TRNG)));
+    DL_TRNG_clearInterruptStatus(TRNG, DL_TRNG_INTERRUPT_CMD_DONE_EVENT);
     //  c. Enable the health fail interrupt by setting the IRQ_HEALTH_FAIL bit in the IMASK register.
     // TODO: LOOK INTO THIS LATER
     //  d. Enable the data captured interrupt by setting the IRQ_CAPTURED_RDY bit in the IMASK register.
