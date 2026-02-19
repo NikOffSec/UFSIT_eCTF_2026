@@ -78,29 +78,31 @@ typedef struct {
     slot_t write_slot;
 } receive_command_t;
 
-// Ensrue that it is a multiple of BLOCK_SIZE
+// 32 bytes
 typedef struct { // sent by the board that has the file to the baord that wants it
     uint32_t random_number;
+    uint8_t padding[12];
     uint8_t hash[HASH_SIZE]; // proof that it's legit
 } receive_request_setup_t;
 
-// Ensrue that it is a multiple of BLOCK_SIZE
+// 96 bytes
 typedef struct {  // sent by the board that wants the file to the board that has it
     slot_t slot;
     group_permission_t permissions[MAX_PERMS];
     uint32_t setup_random_number; // avoid replay attacks by proving you're legit
     uint32_t internal_random_number; // make the HSM with the file also send you a new random number, TODO - probably not needed
     uint8_t hash[HASH_SIZE];
+    uint8_t padding[2];
 } receive_request_t;
 
-// Current size 8288 bytes
+// 8288 bytes (make max command len)
 // 518 AES blocks
 typedef struct {
     uint8_t uuid[UUID_SIZE];
     uint32_t random_number;
     file_t file;
     uint8_t hash[HASH_SIZE];
-    uint8_t padding[4];
+    uint8_t padding[8];
 } receive_response_t;
 
 typedef struct {
