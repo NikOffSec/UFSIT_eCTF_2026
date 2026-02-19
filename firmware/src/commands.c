@@ -188,7 +188,7 @@ int write(uint16_t pkt_len, uint8_t *buf) {
 */
 int receive(uint16_t pkt_len, uint8_t *buf) {
     receive_command_t *command = (receive_command_t *)buf;
-    receive_request_setup_t *command_setup;
+    receive_request_setup_t command_setup;
     receive_request_t request;
     receive_response_t recv_resp;
     msg_type_t cmd;
@@ -196,6 +196,7 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     uint32_t setup_random_number = 0;
     uint32_t internal_random_number = trng_generate();
     int ret;
+    int read_length;
 
     if (!check_pin(command->pin)) {
         print_error("Invalid pin");
@@ -203,10 +204,11 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     }
 
     // First, tell the HSM you are communicating with that you want to start a recieve file transfer
-    memset(&tmp_command_buffer, 0, sizeof(request_setup));
+    memset(&tmp_command_buffer, 0, sizeof(receive_request_setup_t));
     write_packet(TRANSFER_INTERFACE, RECEIVE_SETUP_MSG, (void *)&tmp_command_buffer, sizeof(receive_request_setup_t));
 
-    read_packet(TRANSFER_INTERFACE, &cmd, uart_buf, &read_length);
+    read_length = sizeof(receive_request_setup_t);
+    read_packet(TRANSFER_INTERFACE, &cmd, tmp_command_buffer, &read_length);
 
     if(cmd != RECEIVE_SETUP_MSG) {
         print_error("receive: did not get RECEIVE_SETUP_MSG got something else");
@@ -214,14 +216,12 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     }
 
     // decrypt the uart_buf
-    decrypt_sym(uart_buf, sizeof(receive_request_setup_t), AES_KEY, tmp_command_buffer);
-
-    command_setup = (receive_request_setup_t *)tmp_command_buffer;
+    decrypt_sym(tmp_command_buffer, sizeof(receive_request_setup_t), AES_KEY, (uint8_t*)&command_setup);
 
     // MD5 check the number
     hash((void*)&command_setup, 4, (uint8_t*)&hash);
 
-    if(memcmp(command_setup->hash, hash, HASH_SIZE) != 0) {
+    if(memcmp(command_setup.hash, hash, HASH_SIZE) != 0) {
         print_error("RECV: Hash check failed!");
         return -1;
     }
@@ -232,7 +232,7 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     print_debug(testing_buf);
 
     // This int is used to avoid replay attacks
-    int_from_neighbor = command_setup->random_number;
+    setup_random_number = command_setup.random_number;
 
     // zeroize the buffers we will use
     memset(&recv_resp, 0, sizeof(recv_resp));
