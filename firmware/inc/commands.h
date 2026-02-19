@@ -17,11 +17,13 @@
 #include "security.h"
 #include "stdint.h"
 #include "simple_flash.h"
-#include "simple_crypto.h"
 #include "filesystem.h"
 #include "secrets.h"
 
-extern uint8_t AES_KEY[16];
+#ifdef CRYPTO_EXAMPLE
+#include "simple_crypto.h"
+#endif
+
 
 #define pkt_len_t uint16_t
 
