@@ -219,7 +219,7 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     decrypt_sym(tmp_command_buffer, sizeof(receive_request_setup_t), AES_KEY, (uint8_t*)&command_setup);
 
     // MD5 check the number
-    hash((void*)&command_setup, 4, (uint8_t*)&hash);
+    hash((uint8_t*)&command_setup, 4, (uint8_t*)&hash);
 
     if(memcmp(command_setup.hash, hash, HASH_SIZE) != 0) {
         print_error("RECV: Hash check failed!");
@@ -245,7 +245,7 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     memcpy(&request.permissions, &global_permissions, sizeof(group_permission_t) * MAX_PERMS);
 
     // Calculate the md5 hash of receive_request_t, subtract out the size of the hash and padding
-    hash((void*)&request, sizeof(receive_request_t) - HASH_SIZE - 7, (uint8_t*)&request.hash);
+    hash((uint8_t*)&request, sizeof(receive_request_t) - HASH_SIZE - 7, (uint8_t*)&request.hash);
 
     // Encrypt the receive_request_t command
     encrypt_sym((void*)&request, sizeof(receive_request_t), AES_KEY, tmp_command_buffer);
@@ -376,10 +376,10 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             request_setup.random_number = trng_generate();
 
             // Calcuate the hash of the int and store it in the struct
-            hash((void*)&request_setup, 4, (uint8_t*)&request_setup.hash);
+            hash((uint8_t*)&request_setup, 4, (uint8_t*)&request_setup.hash);
 
             // Encrypt the request message
-            encrypt_sym((void*)&request_setup, sizeof(request_setup), AES_KEY, tmp_command_buffer);
+            encrypt_sym((uint8_t*)&request_setup, sizeof(request_setup), AES_KEY, tmp_command_buffer);
 
             write_packet(TRANSFER_INTERFACE, RECEIVE_SETUP_MSG, (void *)&tmp_command_buffer, sizeof(receive_request_setup_t));
 
@@ -393,7 +393,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             decrypt_sym(uart_buf, sizeof(receive_request_t), AES_KEY, tmp_command_buffer);
 
-            hash((void*)&tmp_command_buffer, sizeof(receive_request_t) - HASH_SIZE - 7, (uint8_t*)&hash);
+            hash((uint8_t*)&tmp_command_buffer, sizeof(receive_request_t) - HASH_SIZE - 7, (uint8_t*)&hash);
 
             command = (receive_request_t*)&tmp_command_buffer;
 
