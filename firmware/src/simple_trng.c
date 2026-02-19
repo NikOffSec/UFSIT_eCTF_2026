@@ -70,7 +70,7 @@ int trng_init() {
     //  c. Enable the health fail interrupt by setting the IRQ_HEALTH_FAIL bit in the IMASK register.
     // TODO: LOOK INTO THIS LATER
     //  d. Enable the data captured interrupt by setting the IRQ_CAPTURED_RDY bit in the IMASK register.
-    // TODO: LOOK INTO THIS LATER
+    DL_TRNG_enableInterrupt(TRNG, DL_TRNG_INTERRUPT_CAPTURE_RDY_EVENT);
 
     // 8. Wait for the first IRQ_CAPTURED_RDY IRQ, and read the DATA_CAPTURE register. This value (the first value read from DATA_CAPTURE after running a startup self-test) is not a true random value and must be read and discarded before collecting true random data from the DATA_CAPTURE register.
     while(!DL_TRNG_isCaptureReady(TRNG));
