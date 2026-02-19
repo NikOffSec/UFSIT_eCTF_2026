@@ -5,7 +5,7 @@ int trng_init() {
 
     char output_buf[128] = {0};
 
-    print_debug("[DEBUG] Awakening the TRNG module\n");
+    print_debug("[DEBUG] Awakening the TRNG module");
 
     // 1. Enable the TRNG by setting the ENABLE bit together with the KEY in the TRNG PWREN register.
     DL_TRNG_enablePower(TRNG);
@@ -31,11 +31,11 @@ int trng_init() {
     //  b. Check that all 8 digital tests passed be ensuring the DIG_TEST field in the TEST_RESULTS register are set (DIG_TEST=0xFF).
     delay_cycles(1024*8); // 8 tests * 1,024 cycles/test
     if (DL_TRNG_getDigitalHealthTestResults(TRNG) != DL_TRNG_DIGITAL_HEALTH_TEST_SUCCESS) {
-        snprintf(output_buf, sizeof(output_buf)-1, "[DEBUG] Digital Block start-up self-test failed TEST_RESULTS: %08x\n", DL_TRNG_getDigitalHealthTestResults(TRNG)); print_debug(output_buf);
+        snprintf(output_buf, sizeof(output_buf)-1, "[DEBUG] Digital Block start-up self-test failed TEST_RESULTS: %08x", DL_TRNG_getDigitalHealthTestResults(TRNG)); print_debug(output_buf);
         return 1;
     }
     else {
-        snprintf(output_buf, sizeof(output_buf)-1, "[DEBUG] Digital Block start-up self-test succeed TEST_RESULTS: %08x\n", DL_TRNG_getDigitalHealthTestResults(TRNG)); print_debug(output_buf);
+        snprintf(output_buf, sizeof(output_buf)-1, "[DEBUG] Digital Block start-up self-test succeed TEST_RESULTS: %08x", DL_TRNG_getDigitalHealthTestResults(TRNG)); print_debug(output_buf);
     }
     //  c. After the digital test, the TRNG will return to the NORM_FUNC state automatically.
     
@@ -48,21 +48,21 @@ int trng_init() {
     //  b. Check that the analog test passed by verifying that the ANA_TEST bit in the TEST_RESULTS register was set.
     delay_cycles(4096); // 1 tests * 4,096 cycles/test
     if (DL_TRNG_getAnalogHealthTestResults(TRNG) != DL_TRNG_ANALOG_HEALTH_TEST_SUCCESS) {
-        print_debug("[DEBUG] Analog Block start-up self-test failed!\n");
+        print_debug("[DEBUG] Analog Block start-up self-test failed!");
         //  c. After the analog test, if the test passed the TRNG will return to the NORM_FUNC state automatically. If the test failed, the TRNG enters the ERR state and must be brought to the OFF state before attempting to use it again.
         DL_TRNG_clearInterruptStatus(TRNG, DL_TRNG_INTERRUPT_HEALTH_FAIL_EVENT);
         DL_TRNG_sendCommand(TRNG, TRNG_CTL_CMD_PWR_OFF);
-        print_debug("[DEBUG] Powering Off the TRNG...\n");
+        print_debug("[DEBUG] Powering Off the TRNG...");
         while(!(DL_TRNG_isCommandDone(TRNG)));
         DL_TRNG_clearInterruptStatus(TRNG, DL_TRNG_INTERRUPT_CMD_DONE_EVENT);
-        print_debug("[DEBUG] TRNG Powered Off\n");
+        print_debug("[DEBUG] TRNG Powered Off");
         return 1;
     }
     else {
-        print_debug("[DEBUG] Analog Block start-up self-test succeed!\n");
+        print_debug("[DEBUG] Analog Block start-up self-test succeed!");
     }
 
-    snprintf(output_buf, sizeof(output_buf)-1, "[DEBUG] State after analog test TRNG: %d\n", DL_TRNG_getCurrentState(TRNG)); print_debug(output_buf);
+    snprintf(output_buf, sizeof(output_buf)-1, "[DEBUG] State after analog test TRNG: %d", DL_TRNG_getCurrentState(TRNG)); print_debug(output_buf);
 
     // 7. Configure the TRNG for normal operation after running start-up self-tests:
     //  a. Clear the IRQ_CAPTURED_RDY_IRQ status by setting the corresponding ICLR bit, as this may have been set during the self-tests performed earlier.
@@ -88,7 +88,7 @@ int trng_init() {
     // TODO: LOOK INTO THIS LATER
     
     DL_TRNG_getCurrentState(TRNG);
-    snprintf(output_buf, sizeof(output_buf)-1, "[DEBUG] State after initialization TRNG: %d\n", DL_TRNG_getCurrentState(TRNG)); print_debug(output_buf);
+    snprintf(output_buf, sizeof(output_buf)-1, "[DEBUG] State after initialization TRNG: %d", DL_TRNG_getCurrentState(TRNG)); print_debug(output_buf);
 
     return 0;
 }

@@ -188,13 +188,13 @@ int main(void) {
             boot_flag();
 
             if (trng_init()) {
-                print_debug("TRNG Init Failed! Module is offline.\n");
+                print_debug("TRNG Init Failed! Module is offline.");
             }
             else {
-                print_debug("TRNG Init Success! Module is ready for generating.\n");
+                print_debug("TRNG Init Success! Module is ready for generating.");
                 char testing_buf[100] = {0};
                 for (int i = 0; i < 5; i++) {
-                    snprintf(testing_buf, sizeof(testing_buf)-1, "Rand Number #%d is \"%08x\"\n", i, trng_generate());
+                    snprintf(testing_buf, sizeof(testing_buf)-1, "Rand Number #%d is \"%08x\"", i, trng_generate());
                     print_debug(testing_buf);
                 }
             }  
