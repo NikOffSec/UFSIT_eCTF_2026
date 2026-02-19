@@ -197,6 +197,7 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     uint32_t internal_random_number = trng_generate();
     int ret;
     uint16_t read_length;
+    uint8_t hash_stack[HASH_SIZE];
 
     if (!check_pin(command->pin)) {
         print_error("Invalid pin");
@@ -219,9 +220,9 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     decrypt_sym(tmp_command_buffer, sizeof(receive_request_setup_t), AES_KEY, (uint8_t*)&command_setup);
 
     // MD5 check the number
-    hash((uint8_t*)&command_setup, 4, (uint8_t*)&hash);
+    hash((uint8_t*)&command_setup, 4, (uint8_t*)&hash_stack);
 
-    if(memcmp(command_setup.hash, hash, HASH_SIZE) != 0) {
+    if(memcmp(command_setup.hash, hash_stack, HASH_SIZE) != 0) {
         print_error("RECV: Hash check failed!");
         return -1;
     }
@@ -334,7 +335,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
     receive_request_setup_t request_setup;
     receive_response_t recv_resp;
     const filesystem_entry_t *metadata;
-    uint8_t hash[HASH_SIZE];
+    uint8_t hash_stack[HASH_SIZE];
 
     read_length = sizeof(uart_buf);
 
@@ -393,11 +394,11 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             decrypt_sym(uart_buf, sizeof(receive_request_t), AES_KEY, tmp_command_buffer);
 
-            hash((uint8_t*)&tmp_command_buffer, sizeof(receive_request_t) - HASH_SIZE - 7, (uint8_t*)&hash);
+            hash((uint8_t*)&tmp_command_buffer, sizeof(receive_request_t) - HASH_SIZE - 7, (uint8_t*)&hash_stack);
 
             command = (receive_request_t*)&tmp_command_buffer;
 
-            if(memcmp(command->hash, hash, HASH_SIZE) != 0) {
+            if(memcmp(command->hash, hash_stack, HASH_SIZE) != 0) {
                 print_error("LISTEN: Hash check failed!");
                 return -1;
             }
