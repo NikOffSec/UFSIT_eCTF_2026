@@ -306,6 +306,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
     receive_request_setup_t *command_setup;
     receive_response_t recv_resp;
     const filesystem_entry_t *metadata;
+    uint8_t hash[HASH_SIZE];
 
     read_length = sizeof(uart_buf);
 
@@ -346,6 +347,12 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             command_setup = (receive_request_setup_t *)tmp_command_buffer;
 
+            // MD5 check the number
+            hash((void*)&command_setup, 4, (uint8_t*)&hash);
+
+            if(memcmp(command_setup->hash, hash, HASH_SIZE) != 0) {
+                print_error("1. Hash check failed!");
+            }
 
             char testing_buf[100] = {0};
                 
