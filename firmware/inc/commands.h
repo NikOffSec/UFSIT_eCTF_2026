@@ -92,7 +92,7 @@ typedef struct {  // sent by the board that wants the file to the board that has
     uint32_t setup_random_number; // avoid replay attacks by proving you're legit
     uint32_t internal_random_number; // make the HSM with the file also send you a new random number, TODO - probably not needed
     uint8_t hash[HASH_SIZE];
-    uint8_t padding[2];
+    uint8_t padding[7];
 } receive_request_t;
 
 // 8288 bytes (make max command len)
@@ -102,7 +102,7 @@ typedef struct {
     uint32_t random_number;
     file_t file;
     uint8_t hash[HASH_SIZE];
-    uint8_t padding[8];
+    uint8_t padding[4];
 } receive_response_t;
 
 typedef struct {
