@@ -396,17 +396,17 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             command = (receive_request_t*)&tmp_command_buffer;
 
+            char testing_buf[100] = {0};
+                
+            snprintf(testing_buf, sizeof(testing_buf)-1, "command->setup_random_number == %d", command->setup_random_number);
+            print_debug(testing_buf);
+
             if (request_setup.random_number != command->setup_random_number) {
                 print_error("LISTEN: Setup random number different from the one I gave the other HSM!");
                 return -1;
             }
 
             hash((uint8_t*)&tmp_command_buffer, sizeof(receive_request_t) - HASH_SIZE - 7, (uint8_t*)&hash_stack);
-
-            char testing_buf[100] = {0};
-                
-            snprintf(testing_buf, sizeof(testing_buf)-1, "command->setup_random_number == %d", command->setup_random_number);
-            print_debug(testing_buf);
 
             if(memcmp(command->hash, hash_stack, HASH_SIZE) != 0) {
                 print_error("LISTEN: Hash check failed!");
