@@ -61,7 +61,11 @@ int trng_init() {
     else {
         print_debug("Analog Block start-up self-test succeed!\n");
     }
+
+    snprintf(output_buf, sizeof(output_buf)-1, "State after analog test TRNG: %d\n", DL_TRNG_getCurrentState(TRNG)); print_debug(output_buf);
     
+    return 0;
+
     // 7. Configure the TRNG for normal operation after running start-up self-tests:
     //  a. Clear the IRQ_CAPTURED_RDY_IRQ status by setting the corresponding ICLR bit, as this may have been set during the self-tests performed earlier.
     DL_TRNG_clearInterruptStatus(TRNG, DL_TRNG_INTERRUPT_CAPTURE_RDY_EVENT);
@@ -73,7 +77,7 @@ int trng_init() {
     DL_TRNG_enableInterrupt(TRNG, DL_TRNG_INTERRUPT_CAPTURE_RDY_EVENT);
 
     // 8. Wait for the first IRQ_CAPTURED_RDY IRQ, and read the DATA_CAPTURE register. This value (the first value read from DATA_CAPTURE after running a startup self-test) is not a true random value and must be read and discarded before collecting true random data from the DATA_CAPTURE register.
-    while(!DL_TRNG_isCaptureReady(TRNG));
+    while(!(DL_TRNG_isCaptureReady(TRNG)));
     DL_TRNG_getCapture(TRNG);
     DL_TRNG_clearInterruptStatus(TRNG, DL_TRNG_INTERRUPT_CAPTURE_RDY_EVENT);
 
