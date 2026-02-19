@@ -20,14 +20,15 @@ void trng_init() {
     DL_TRNG_sendCommand(TRNG, DL_TRNG_CMD_NORM_FUNC);
     // Wait for the IRQ_CMD_DONE interrupt flag to be set, indicating that the CMD completed.
     while(!(DL_TRNG_isCommandDone(TRNG)));
+    DL_TRNG_clearInterruptStatus(TRNG, DL_TRNG_INTERRUPT_CMD_DONE_EVENT);
 
     // 5. Run the digital block start-up self-test routine to ensure the TRNG digital is functioning properly:
     //  a. Move the TRNG from the NORM_FUNC state to the TEST_DIG state by writing the TEST_DIG command (0x1) to the CMD field in the CTL register.
     DL_TRNG_sendCommand(TRNG, DL_TRNG_CMD_TEST_DIG);
     // Wait for the IRQ_CMD_DONE interrupt flag to be set, indicating that the digital self-test has completed.
     while(!(DL_TRNG_isCommandDone(TRNG)));
-    //  b. Check that all 8 digital tests passed be ensuring the DIG_TEST field in the TEST_RESULTS register are set (DIG_TEST=0xFF).
     DL_TRNG_clearInterruptStatus(TRNG, DL_TRNG_INTERRUPT_CMD_DONE_EVENT);
+    //  b. Check that all 8 digital tests passed be ensuring the DIG_TEST field in the TEST_RESULTS register are set (DIG_TEST=0xFF).
     delay_cycles(100000); // 8 tests * 1,024 cycles/test, testing with 100,000
     unsigned int temp = DL_TRNG_getDigitalHealthTestResults(TRNG);
     if (temp != DL_TRNG_DIGITAL_HEALTH_TEST_SUCCESS) {
