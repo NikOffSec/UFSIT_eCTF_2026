@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <strings.h>
 
 #include "simple_flash.h"
 #include "host_messaging.h"
@@ -181,7 +182,7 @@ int main(void) {
 #endif // CRYPTO_EXAMPLE
             char testing_buf[100] = {0};
                 
-            snprintf(testing_buf, sizeof(testing_buf)-1, "size of receive_response_t #%d", sizeof(receive_response_t));
+            snprintf(testing_buf, sizeof(testing_buf)-1, "receive_response_t #%d\nreceive_request_t #%d\nreceive_request_setup_t #%d", sizeof(receive_response_t), sizeof(receive_request_t), sizeof(receive_request_setup_t));
             print_debug(testing_buf);
 
             STATUS_LED_OFF();

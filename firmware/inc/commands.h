@@ -26,6 +26,10 @@
 // Pin will be 6 hex characters 0-9,a-f
 typedef unsigned char pin_t[6];
 
+// can support the largest struct size message size of the device for in place encryption/decryption
+#define MAX_COMMAND_SIZE 8288
+uint8_t tmp_command_buffer[MAX_COMMAND_SIZE];
+
 #define MAX_MSG_SIZE sizeof(write_command_t)
 
 // calculates the length of a list packet based on the number of files listed
@@ -89,11 +93,14 @@ typedef struct {  // sent by the board that wants the file to the board that has
     uint8_t hash[HASH_SIZE];
 } receive_request_t;
 
+// Current size 8288 bytes
+// 518 AES blocks
 typedef struct {
     uint8_t uuid[UUID_SIZE];
     uint32_t random_number;
     file_t file;
     uint8_t hash[HASH_SIZE];
+    uint8_t padding[4];
 } receive_response_t;
 
 typedef struct {
