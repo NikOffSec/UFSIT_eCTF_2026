@@ -55,7 +55,7 @@ int trng_init() {
         print_debug("Powering Off the TRNG...\n");
         while(!(DL_TRNG_isCommandDone(TRNG)));
         DL_TRNG_clearInterruptStatus(TRNG, DL_TRNG_INTERRUPT_CMD_DONE_EVENT);
-        print_debug("TRNG Powered Off\n")
+        print_debug("TRNG Powered Off\n");
         return 1;
     }
     else {
@@ -64,7 +64,7 @@ int trng_init() {
     
     // 7. Configure the TRNG for normal operation after running start-up self-tests:
     //  a. Clear the IRQ_CAPTURED_RDY_IRQ status by setting the corresponding ICLR bit, as this may have been set during the self-tests performed earlier.
-    DL_TRNG_clearInterruptStatus(TRNG, DL_TRNG_INTERRUPT_CAPTURE_RDY_EVENT)
+    DL_TRNG_clearInterruptStatus(TRNG, DL_TRNG_INTERRUPT_CAPTURE_RDY_EVENT);
     //  b. Set the decimation rate to the desired value by programming the new decimation rate into the DECIM_RATE field of the CTL register, followed by sending the NORM_FUNC command again (by writing 0x3 to the CMD field in the CTL register). A decimation rate of 4 (DECIM_RATE=0x3) or greater is recommended.
     // TODO: LOOK INTO THIS LATER
     //  c. Enable the health fail interrupt by setting the IRQ_HEALTH_FAIL bit in the IMASK register.
