@@ -266,7 +266,7 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
 
     // Check the int
     if(recv_resp.internal_random_number != internal_random_number) {
-        print_error('RECIEVE: The int given to the HSM does not match when I got back the file!');
+        print_error("RECIEVE: The int given to the HSM does not match when I got back the file!");
         return -1;
     }
 
