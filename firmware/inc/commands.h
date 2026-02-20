@@ -102,7 +102,7 @@ typedef struct {  // sent by the board that wants the file to the board that has
 // 8272 bytes (make max command len)
 typedef struct {
     uint8_t uuid[UUID_SIZE];
-    uint32_t random_number;
+    uint32_t internal_random_number;
     file_t file;
     uint8_t padding[4];
     uint8_t hash[HASH_SIZE];

@@ -206,7 +206,8 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
 
     // First, tell the HSM you are communicating with that you want to start a recieve file transfer
     memset(&tmp_command_buffer, 0, sizeof(receive_request_setup_t));
-    write_packet(TRANSFER_INTERFACE, RECEIVE_SETUP_MSG, (void *)&tmp_command_buffer, sizeof(receive_request_setup_t));
+    //write_packet(TRANSFER_INTERFACE, RECEIVE_SETUP_MSG, (void *)&tmp_command_buffer, sizeof(receive_request_setup_t));
+    write_packet(TRANSFER_INTERFACE, RECEIVE_SETUP_MSG, NULL, 0);
 
     read_length = sizeof(receive_request_setup_t);
     read_packet(TRANSFER_INTERFACE, &cmd, tmp_command_buffer, &read_length);
@@ -255,16 +256,28 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     // request the file from the neighboring device
     write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&tmp_command_buffer, sizeof(receive_request_t));
 
-    print_debug("WROTE REQUEST PACKET TO TRANSFER INTERFACE");
+    
+    // recieve the response message containing the file
+    len_recv_msg = sizeof(tmp_command_buffer);
+    read_packet(TRANSFER_INTERFACE, &cmd, tmp_command_buffer, &len_recv_msg);
 
-    while(1);
+    // Decrypt file
+    decrypt_sym(tmp_command_buffer, sizeof(receive_request_t), AES_KEY, &recv_resp);
 
-    // set essentially no limit to the receive message size
-    // TODO - fix
-    len_recv_msg = 0xffff;
+    // Check the int
+    if(recv_resp.internal_random_number != internal_random_number) {
+        print_error('RECIEVE: The int given to the HSM does not match when I got back the file!');
+        return -1;
+    }
 
-    // recieve the response message
-    read_packet(TRANSFER_INTERFACE, &cmd, &recv_resp, &len_recv_msg);
+    // Check the hash
+    hash((uint8_t*)&command_setup, 4, (uint8_t*)&hash_stack);
+
+    if(memcmp(command->hash, hash_stack, HASH_SIZE) != 0) {
+        print_error("RECIEVE: File Hash check failed!");
+        return -1;
+    }
+
     if (cmd != RECEIVE_MSG) {
         print_error("Opcode mismatch");
         return -1;
@@ -338,6 +351,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
     const filesystem_entry_t *metadata;
     uint8_t hash_stack[HASH_SIZE];
     int error = 0;
+    uint32_t internal_random_number = 0;
 
     read_length = sizeof(uart_buf);
 
@@ -416,19 +430,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
                 print_error("LISTEN: Hash check failed!");
                 return -1;
             }
-
-            print_debug("HASH CHECK WENT THROUGH");
             
-            while(1);
-
-            // TODO: the reference design does not implement *ANY* security
-            // you will want to add something here to comply with SR1
-            // I think group ID parsing goes here??? Back by ed25519 keys.
-
-            // if this read fails, the other device will not receive a response and
-            // may need to be reset before further testing can occur
-            
-
             // Sanity checking
             if (command->slot > MAX_FILE_COUNT) {
                 print_error("LISTEN: recv a slot higher then number of possible slots");
@@ -471,9 +473,18 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             memcpy(&recv_resp.uuid, &metadata->uuid, UUID_SIZE);
 
+            // Add the challenge number that the neighbor HSM gave us
+            recv_resp.internal_random_number = command->internal_random_number;\
+
+            // Calculate hash
+            hash((uint8_t*)&recv_resp, sizeof(receive_response_t) - HASH_SIZE, (uint8_t*)&recv_resp.hash);
+
+            // encrypt the packet
+            encrypt_sym((void*)&recv_resp, sizeof(receive_response_t), AES_KEY, tmp_command_buffer);
+
             // send the file to the neighbor hsm
             write_length = sizeof(receive_response_t);
-            write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, &recv_resp, write_length);
+            write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, &tmp_command_buffer, write_length);
             break;
         default:
             print_error("Bad message type");
