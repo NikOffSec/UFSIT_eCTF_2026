@@ -22,7 +22,8 @@ OBJECTS = $(BUILDDIR)/HSM.so \
     $(BUILDDIR)/security.so \
     $(BUILDDIR)/filesystem.so \
     $(BUILDDIR)/commands.so \
-    $(BUILDDIR)/simple_trng.so
+    $(BUILDDIR)/simple_trng.so \
+    $(BUILDDIR)/simple_counter.so
 
 ifeq ($(CRYPTO_EXAMPLE), 1)
 OBJECTS += $(BUILDDIR)/simple_crypto.so
