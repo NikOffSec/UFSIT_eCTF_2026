@@ -250,7 +250,8 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
 
     // Encrypt the receive_request_t command
     encrypt_sym((void*)&request, sizeof(receive_request_t), AES_KEY, tmp_command_buffer);
-
+    
+    print_hex_debug(tmp_command_buffer, 16);
     // request the file from the neighboring device
     write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&tmp_command_buffer, sizeof(receive_request_t));
 
@@ -396,6 +397,8 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             command = (receive_request_t*)&tmp_command_buffer;
 
+            print_hex_debug(tmp_command_buffer, 16);
+            
             char testing_buf[100] = {0};
                 
             snprintf(testing_buf, sizeof(testing_buf)-1, "command->setup_random_number == %d", command->setup_random_number);
