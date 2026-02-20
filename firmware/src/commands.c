@@ -389,6 +389,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             for(int i = 0; i < 10000000; i++);
 
             // Get back the message from the user where they 
+            read_length = sizeof(uart_buf);
             error = read_packet(TRANSFER_INTERFACE, &cmd, uart_buf, &read_length);
 
             if(cmd != RECEIVE_MSG) {
