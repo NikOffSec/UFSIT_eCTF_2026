@@ -134,11 +134,13 @@ void init() {
         }
     }
 
+    /* //FIXME: Uncomment this later for release
     if(counter_init()) {
         while(1){
             print_error("ERROR: COUNTER CAN'T INIT");
         }
     }
+    */
 
 }
 
@@ -190,6 +192,12 @@ int main(void) {
 
         // Handle list command
         case LIST_MSG:
+
+            if(counter_init()) {
+                while(1){
+                    print_error("ERROR: COUNTER CAN'T INIT");
+                }
+            }
 
             STATUS_LED_OFF();
             list(pkt_len, uart_buf);
