@@ -337,6 +337,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
     receive_response_t recv_resp;
     const filesystem_entry_t *metadata;
     uint8_t hash_stack[HASH_SIZE];
+    int error = 0;
 
     read_length = sizeof(uart_buf);
 
@@ -385,8 +386,10 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             write_packet(TRANSFER_INTERFACE, RECEIVE_SETUP_MSG, (void *)&tmp_command_buffer, sizeof(receive_request_setup_t));
 
+            for(int i = 0; i < 10000000; i++);
+
             // Get back the message from the user where they 
-            read_packet(TRANSFER_INTERFACE, &cmd, uart_buf, &read_length);
+            error = read_packet(TRANSFER_INTERFACE, &cmd, uart_buf, &read_length);
 
             if(cmd != RECEIVE_MSG) {
                 print_error("receive: did not get RECEIVE_SETUP_MSG got something else");
@@ -398,10 +401,9 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             command = (receive_request_t*)&tmp_command_buffer;
 
             print_hex_debug(tmp_command_buffer, 16);
-            
+
             char testing_buf[100] = {0};
-                
-            snprintf(testing_buf, sizeof(testing_buf)-1, "command->setup_random_number == %d", command->setup_random_number);
+            snprintf(testing_buf, sizeof(testing_buf)-1, "error %d", error);
             print_debug(testing_buf);
 
             if (request_setup.random_number != command->setup_random_number) {

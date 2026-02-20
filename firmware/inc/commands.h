@@ -85,8 +85,8 @@ typedef struct {
 // 32 bytes
 typedef struct { // sent by the board that has the file to the baord that wants it
     uint32_t random_number;
-    uint8_t padding[12];
     uint8_t hash[HASH_SIZE]; // proof that it's legit
+    uint8_t padding[12];
 } receive_request_setup_t;
 
 // 80 bytes
