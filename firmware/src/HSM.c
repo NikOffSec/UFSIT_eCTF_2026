@@ -26,6 +26,7 @@
 #include "simple_uart.h"
 
 #include "simple_trng.h"
+#include "simple_counter.h"
 
 /* Code between this #ifdef and the subsequent #endif will
 *  be ignored by the compiler if CRYPTO_EXAMPLE is not set in
