@@ -262,7 +262,7 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     read_packet(TRANSFER_INTERFACE, &cmd, tmp_command_buffer, &len_recv_msg);
 
     // Decrypt file
-    decrypt_sym(tmp_command_buffer, sizeof(receive_request_t), AES_KEY, &recv_resp);
+    decrypt_sym(tmp_command_buffer, sizeof(receive_request_t), AES_KEY, (uint8_t *)&recv_resp);
 
     // Check the int
     if(recv_resp.internal_random_number != internal_random_number) {
