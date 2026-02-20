@@ -132,6 +132,13 @@ void init() {
             print_error("ERROR: TRNG CAN'T INIT");
         }
     }
+
+    if(counter_init()) {
+        while(1){
+            print_error("ERROR: COUNTER CAN'T INIT");
+        }
+    }
+
 }
 
 /**********************************************************
