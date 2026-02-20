@@ -386,8 +386,6 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             write_packet(TRANSFER_INTERFACE, RECEIVE_SETUP_MSG, (void *)&tmp_command_buffer, sizeof(receive_request_setup_t));
 
-            for(int i = 0; i < 10000000; i++);
-
             // Get back the message from the user where they 
             read_length = sizeof(uart_buf);
             error = read_packet(TRANSFER_INTERFACE, &cmd, uart_buf, &read_length);
@@ -412,7 +410,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
                 return -1;
             }
 
-            hash((uint8_t*)&tmp_command_buffer, sizeof(receive_request_t) - HASH_SIZE - 7, (uint8_t*)&hash_stack);
+            hash((uint8_t*)&tmp_command_buffer, sizeof(receive_request_t) - HASH_SIZE, (uint8_t*)&hash_stack);
 
             if(memcmp(command->hash, hash_stack, HASH_SIZE) != 0) {
                 print_error("LISTEN: Hash check failed!");
