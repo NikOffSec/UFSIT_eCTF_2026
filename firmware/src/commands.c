@@ -271,9 +271,9 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     }
 
     // Check the hash
-    hash((uint8_t*)&command_setup, 4, (uint8_t*)&hash_stack);
+    hash((uint8_t*)&recv_resp, sizeof(receive_request_t) - HASH_SIZE, (uint8_t*)&hash_stack);
 
-    if(memcmp(command->hash, hash_stack, HASH_SIZE) != 0) {
+    if(memcmp(recv_resp.hash, hash_stack, HASH_SIZE) != 0) {
         print_error("RECIEVE: File Hash check failed!");
         return -1;
     }
