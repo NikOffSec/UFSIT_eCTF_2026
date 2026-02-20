@@ -245,8 +245,8 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     request.slot = command->read_slot;
     memcpy(&request.permissions, &global_permissions, sizeof(group_permission_t) * MAX_PERMS);
 
-    // Calculate the md5 hash of receive_request_t, subtract out the size of the hash and padding
-    hash((uint8_t*)&request, sizeof(receive_request_t) - HASH_SIZE - 7, (uint8_t*)&request.hash);
+    // Calculate the md5 hash of receive_request_t, subtract out the size of the hash
+    hash((uint8_t*)&request, sizeof(receive_request_t) - HASH_SIZE, (uint8_t*)&request.hash);
 
     // Encrypt the receive_request_t command
     encrypt_sym((void*)&request, sizeof(receive_request_t), AES_KEY, tmp_command_buffer);
