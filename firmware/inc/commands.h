@@ -78,11 +78,6 @@ typedef struct {
 } receive_command_t;
 
 typedef struct {
-    slot_t slot;
-    group_permission_t permissions[MAX_PERMS];
-} receive_request_t;
-
-typedef struct {
     uint16_t sender_id;                 // stable per-firmware-image ID
     slot_t slot;
     uint8_t nonce[GMAC_NONCE_LEN];      // challenge or sender nonce
@@ -90,6 +85,11 @@ typedef struct {
     uint8_t perm_blob[PERM_BLOB_MAX];   // packed permissions
     uint8_t tag[GMAC_TAG_LEN];          // GMAC over AAD
 } receive_request_t;
+
+typedef struct {
+    uint8_t uuid[UUID_SIZE];
+    file_t file;
+} receive_response_t;
 
 typedef struct {
     pin_t pin;

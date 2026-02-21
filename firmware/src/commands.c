@@ -287,7 +287,8 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
         print_error("Invalid pin");
         return -1;
     }
-
+    
+    print_debug("LISTEN: entering GMAC verify path\n");
     // zeroize the buffers we will use
     memset(&recv_resp, 0, sizeof(recv_resp));
     memset(&request, 0, sizeof(request));
@@ -322,6 +323,9 @@ if (gmac_compute_tag(GMAC_KEY, request.nonce, aad, aad_len, request.tag) != 0) {
     print_error("GMAC tag generation failed");
     return -1;
 }
+
+// TEST ONLY (force tag mismatch)
+request.tag[0] ^= 0x01;
 
     // request the file from the neighboring device
     write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&request, sizeof(receive_request_t));
