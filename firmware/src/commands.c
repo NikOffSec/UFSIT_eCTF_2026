@@ -14,10 +14,52 @@
 #include "host_messaging.h"
 #include "commands.h"
 #include "filesystem.h"
+#include "gmac.h"
+#include "secrets.h"
 
 /* IMPORTANT COMPONENTS FROM HSM.c */
 // extern file_t hsm_status[MAX_FILE_COUNT];
 static file_t current_file;
+
+// ===== GMAC test mode (TEMPORARY) =====
+// 1 = deterministic nonce, replay checks disabled (for integration testing only)
+#define GMAC_TEST_MODE_NO_NONCE 1
+
+#if GMAC_TEST_MODE_NO_NONCE
+#warning "GMAC test mode enabled: deterministic nonce + replay disabled. NOT FOR COMPETITION USE."
+#endif
+
+#ifndef HSM_ID
+#define HSM_ID 0x0001
+#endif
+
+static int get_request_nonce(uint8_t nonce[GMAC_NONCE_LEN]) {
+#if GMAC_TEST_MODE_NO_NONCE
+    // Deterministic evolving nonce for testing GMAC plumbing without TRNG
+    static uint32_t test_ctr = 1;
+    memset(nonce, 0, GMAC_NONCE_LEN);
+    nonce[8]  = (uint8_t)(test_ctr >> 24);
+    nonce[9]  = (uint8_t)(test_ctr >> 16);
+    nonce[10] = (uint8_t)(test_ctr >> 8);
+    nonce[11] = (uint8_t)(test_ctr);
+    test_ctr++;
+    return 0;
+#else
+    return trng_get_bytes(nonce, GMAC_NONCE_LEN);
+#endif
+}
+
+// Stub replay checker for test mode
+static bool nonce_accept_test(uint16_t sender_id, const uint8_t *nonce, size_t nonce_len) {
+    (void)sender_id;
+    (void)nonce;
+    (void)nonce_len;
+#if GMAC_TEST_MODE_NO_NONCE
+    return true;   // TEMP: disable replay checks in test mode
+#else
+    return nonce_accept(sender_id, nonce, nonce_len);
+#endif
+}
 
 /**********************************************************
  ******************** HELPER FUNCTIONS ********************
@@ -47,6 +89,70 @@ void generate_list_files(list_response_t *file_list) {
     }
 }
 
+static uint8_t perm_flags(const group_permission_t *p) {
+    return (uint8_t)((p->read ? 1u : 0u) |
+                     (p->write ? 2u : 0u) |
+                     (p->receive ? 4u : 0u));
+}
+
+static size_t pack_permissions_sorted(const group_permission_t *in, size_t n,
+                                      uint8_t *out, size_t out_cap) {
+    group_permission_t tmp[MAX_PERMS];
+    size_t m = 0;
+
+    for (size_t i = 0; i < n; i++) {
+        if (in[i].group_id == 0) continue; // your sentinel for unused
+        tmp[m++] = in[i];
+    }
+
+    // insertion sort by group_id (MAX_PERMS is tiny)
+    for (size_t i = 1; i < m; i++) {
+        group_permission_t key = tmp[i];
+        size_t j = i;
+        while (j > 0 && tmp[j - 1].group_id > key.group_id) {
+            tmp[j] = tmp[j - 1];
+            j--;
+        }
+        tmp[j] = key;
+    }
+
+    size_t need = m * 3;
+    if (out_cap < need) return 0;
+
+    for (size_t i = 0; i < m; i++) {
+        uint16_t gid = tmp[i].group_id;
+        out[i * 3 + 0] = (uint8_t)(gid >> 8);
+        out[i * 3 + 1] = (uint8_t)(gid & 0xFF);
+        out[i * 3 + 2] = perm_flags(&tmp[i]);
+    }
+
+    return need;
+}
+
+static size_t build_receive_request_aad(const receive_request_t *req,
+                                        uint8_t *out, size_t out_cap) {
+    // AAD fields:
+    // sender_id (2) | slot (2) | perm_blob_len (1) | perm_blob (...)
+    // NOTE: nonce is NOT included here because it is passed as the GCM nonce/IV.
+    // If you want extra binding, you can include it too, but then both sides must match exactly.
+    size_t need = 2 + sizeof(slot_t) + 1 + req->perm_blob_len;
+    if (out_cap < need) return 0;
+
+    size_t off = 0;
+    out[off++] = (uint8_t)(req->sender_id >> 8);
+    out[off++] = (uint8_t)(req->sender_id & 0xFF);
+
+    // slot_t is likely uint16_t, but encode explicitly
+    out[off++] = (uint8_t)(((uint16_t)req->slot) >> 8);
+    out[off++] = (uint8_t)(((uint16_t)req->slot) & 0xFF);
+
+    out[off++] = req->perm_blob_len;
+
+    memcpy(&out[off], req->perm_blob, req->perm_blob_len);
+    off += req->perm_blob_len;
+
+    return off;
+}
 
 /**********************************************************
  ******************** COMMAND HANDLERS ********************
@@ -187,8 +293,35 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     memset(&request, 0, sizeof(request));
 
     // prep request to neighbor
+    request.sender_id = HSM_ID;   // add this macro in secrets.h or config
     request.slot = command->read_slot;
-    memcpy(&request.permissions, &global_permissions, sizeof(group_permission_t) * MAX_PERMS);
+
+    // Build canonical permission blob
+    size_t perm_blob_len = pack_permissions_sorted(global_permissions, MAX_PERMS,
+                                                request.perm_blob, sizeof(request.perm_blob));
+    if (perm_blob_len == 0 && MAX_PERMS > 0) {
+        print_error("Packing permissions failed");
+        return -1;
+    }
+    request.perm_blob_len = (uint8_t)perm_blob_len;
+
+    // Temp nonce retriever
+    if (get_request_nonce(request.nonce) != 0) {
+    print_error("Nonce generation failed");
+    return -1;
+    }
+    // Build AAD and compute GMAC
+    uint8_t aad[2 + 2 + 1 + PERM_BLOB_MAX];
+    size_t aad_len = build_receive_request_aad(&request, aad, sizeof(aad));
+    if (aad_len == 0) {
+        print_error("AAD build failed");
+        return -1;
+    }
+
+if (gmac_compute_tag(GMAC_KEY, request.nonce, aad, aad_len, request.tag) != 0) {
+    print_error("GMAC tag generation failed");
+    return -1;
+}
 
     // request the file from the neighboring device
     write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&request, sizeof(receive_request_t));
@@ -258,7 +391,7 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
  * @return 0 upon success. A negative value on error.
 */
 int listen(uint16_t pkt_len, uint8_t *buf) {
-    uint8_t uart_buf[sizeof(receive_request_t)];
+    uint8_t uart_buf[MAX_MSG_SIZE > sizeof(receive_request_t) ? MAX_MSG_SIZE : sizeof(receive_request_t)];
     msg_type_t cmd;
     pkt_len_t write_length, read_length;
     list_response_t file_list;
@@ -287,17 +420,57 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             write_length = LIST_PKT_LEN(file_list.n_files);
             write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, &file_list, write_length);
             break;
-        case RECEIVE_MSG:
+                case RECEIVE_MSG: {
             // get the request
             command = (receive_request_t *)uart_buf;
 
-            // TODO: the reference design does not implement *ANY* security
-            // you will want to add something here to comply with SR1
+            // Basic bounds check on perm blob len
+            if (command->perm_blob_len > PERM_BLOB_MAX) {
+                print_error("Invalid permission blob length");
+                return -1;
+            }
 
-            // if this read fails, the other device will not receive a response and
-            // may need to be reset before further testing can occur
+            // Optional: sanity-check packet length for RECEIVE request
+            // (helps catch malformed packets)
+            if (read_length < (pkt_len_t)(sizeof(receive_request_t) - PERM_BLOB_MAX + command->perm_blob_len)) {
+                print_error("RECEIVE packet too short");
+                return -1;
+            }
+
+            // Replay protection (stubbed in test mode)
+            if (!nonce_accept_test(command->sender_id, command->nonce, GMAC_NONCE_LEN)) {
+                print_error("Replay detected");
+                return -1;
+            }
+
+            // Rebuild AAD and verify GMAC tag
+            uint8_t aad[2 + 2 + 1 + PERM_BLOB_MAX];
+            size_t aad_len = build_receive_request_aad(command, aad, sizeof(aad));
+            if (aad_len == 0) {
+                print_error("AAD build failed");
+                return -1;
+            }
+
+            uint8_t expected_tag[GMAC_TAG_LEN];
+            if (gmac_compute_tag(GMAC_KEY, command->nonce, aad, aad_len, expected_tag) != 0) {
+                print_error("GMAC compute failed");
+                return -1;
+            }
+
+            if (!gmac_tag_eq_ct(expected_tag, command->tag)) {
+                print_error("GMAC verify failed");
+                return -1;
+            }
+
+            // Read the requested file FIRST (needed to know its group_id)
             if (read_file(command->slot, &recv_resp.file) < 0) {
                 print_error("Failed to read file");
+                return -1;
+            }
+
+            // Local policy enforcement (safer than trusting requester perms)
+            if (!validate_permission(recv_resp.file.group_id, PERM_RECEIVE)) {
+                print_error("Local policy denies receive/send");
                 return -1;
             }
 
@@ -313,10 +486,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             write_length = sizeof(receive_response_t);
             write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, &recv_resp, write_length);
             break;
-        default:
-            print_error("Bad message type");
-            return -1;
-    }
+        }
 
     // blank success message
     write_packet(CONTROL_INTERFACE, LISTEN_MSG, NULL, 0);

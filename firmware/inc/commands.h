@@ -22,6 +22,10 @@
 
 #define pkt_len_t uint16_t
 
+#define GMAC_NONCE_LEN 12
+#define GMAC_TAG_LEN   16
+#define PERM_BLOB_MAX  (MAX_PERMS * 3)   // group_id(2) + flags(1) per entry
+
 // Pin will be 6 hex characters 0-9,a-f
 typedef unsigned char pin_t[6];
 
@@ -79,9 +83,13 @@ typedef struct {
 } receive_request_t;
 
 typedef struct {
-    uint8_t uuid[UUID_SIZE];
-    file_t file;
-} receive_response_t;
+    uint16_t sender_id;                 // stable per-firmware-image ID
+    slot_t slot;
+    uint8_t nonce[GMAC_NONCE_LEN];      // challenge or sender nonce
+    uint8_t perm_blob_len;              // actual bytes used in perm_blob
+    uint8_t perm_blob[PERM_BLOB_MAX];   // packed permissions
+    uint8_t tag[GMAC_TAG_LEN];          // GMAC over AAD
+} receive_request_t;
 
 typedef struct {
     pin_t pin;

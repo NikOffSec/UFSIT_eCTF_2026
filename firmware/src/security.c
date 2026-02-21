@@ -81,3 +81,43 @@ bool validate_permission(uint16_t group_id, permission_enum_t perm) {
     // Group not found => deny by default
     return false;
 }
+
+static uint8_t perm_flags(const group_permission_t *p) {
+    return (uint8_t)((p->read ? 1u : 0u) |
+                     (p->write ? 2u : 0u) |
+                     (p->receive ? 4u : 0u));
+}
+
+static size_t pack_permissions_sorted(const group_permission_t *in, size_t n,
+                                      uint8_t *out, size_t out_cap) {
+    // Make a local copy and sort it (n is small: MAX_PERMS=8)
+    group_permission_t tmp[MAX_PERMS];
+    size_t m = 0;
+
+    for (size_t i = 0; i < n; i++) {
+        if (in[i].group_id == 0) continue;   // your current sentinel
+        tmp[m++] = in[i];
+    }
+
+    // insertion sort (m <= 8)
+    for (size_t i = 1; i < m; i++) {
+        group_permission_t key = tmp[i];
+        size_t j = i;
+        while (j > 0 && tmp[j-1].group_id > key.group_id) {
+            tmp[j] = tmp[j-1];
+            j--;
+        }
+        tmp[j] = key;
+    }
+
+    size_t need = m * 3;
+    if (out_cap < need) return 0;
+
+    for (size_t i = 0; i < m; i++) {
+        uint16_t gid = tmp[i].group_id;
+        out[i*3 + 0] = (uint8_t)(gid >> 8);
+        out[i*3 + 1] = (uint8_t)(gid & 0xFF);
+        out[i*3 + 2] = perm_flags(&tmp[i]);
+    }
+    return need;
+}

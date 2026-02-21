@@ -12,47 +12,57 @@ Copyright: Copyright (c) 2026 The MITRE Corporation
 
 import argparse
 import json
+import secrets as pysecrets
 from pathlib import Path
 
 from loguru import logger
 
 
 def gen_secrets(groups: list[int]) -> bytes:
-    """Generate the contents secrets file
+    """Generate the contents secrets file.
 
-    This will be passed to the Encoder, ectf26_design.gen_secrets,
-    and the build process of the firmware
+    This file is used by the build system and is not exposed to attackers.
 
-    NOTE: you should NOT write to secrets files within this function.
-    All generated secrets must be contained in the returned bytes
-    object.
+    We store:
+      - schema/version info
+      - the valid deployment groups
+      - a deployment master key (hex-encoded)
+      - a dedicated GMAC key (hex-encoded) [optional but convenient]
 
-    :param groups: List of permission groups that will be valid in this
-        deployment.
-
-    :returns: Contents of the secrets file
+    :param groups: List of permission groups valid in this deployment
+    :returns: bytes for the secrets file
     """
-    # TODO: Update this function to generate any system-wide secrets needed by
-    #   your design
+    # Normalize groups for determinism and sanity
+    norm_groups = sorted(set(int(g) & 0xFFFF for g in groups))
 
-    # Create the secrets object
-    # You can change this to generate any secret material
-    # The secrets file will never be shared with attackers
-    secrets = {
-        "groups": groups,
-        "some_secrets": "EXAMPLE",
+    # Generate cryptographic secret material
+    # 16 bytes = AES-128 key size
+    k_master = pysecrets.token_bytes(16)
+
+    # Option A (simple): use a separate random GMAC key directly
+    # This is fine for a first implementation.
+    k_gmac = pysecrets.token_bytes(16)
+
+    # Option B (better later): derive k_gmac from k_master with a KDF
+    # For now, keep it simple and explicit.
+
+    secrets_obj = {
+        "version": 1,
+        "format": "ectf26-secrets-json",
+        "groups": norm_groups,
+        "crypto": {
+            "aes_key_bytes": 16,
+            "gmac_key_hex": k_gmac.hex(),
+            "master_key_hex": k_master.hex(),
+        },
     }
 
-    # NOTE: if you choose to use JSON for your file type, you will not
-    # be able to store binary data, and must either use a different file
-    # type or encode the binary data to hex, base64, or another type of
-    # ASCII-only encoding
-    return json.dumps(secrets).encode()
+    # Compact JSON makes debugging easier while staying deterministic-ish
+    return json.dumps(secrets_obj, separators=(",", ":"), sort_keys=True).encode("utf-8")
 
 
 def parse_args():
-    """Define and parse the command line arguments
-    """
+    """Define and parse the command line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--force",
@@ -75,27 +85,17 @@ def parse_args():
 
 
 def main():
-    """Main function of gen_secrets
-
-    You will likely not have to change this function
-    """
-    # Parse the command line arguments
+    """Main function of gen_secrets."""
     args = parse_args()
 
-    secrets = gen_secrets(args.groups)
+    secrets_blob = gen_secrets(args.groups)
 
-    # Print the generated secrets for your own debugging
-    # Attackers will NOT have access to the output of this, but feel free to remove
-    #
-    # NOTE: Printing sensitive data is generally not good security practice
-    logger.debug(f"Generated secrets: {secrets}")
+    # Debug only; consider removing in production if you don't want secrets in logs.
+    logger.debug(f"Generated secrets: {secrets_blob}")
 
-    # Open the file, erroring if the file exists unless the --force arg is provided
     with open(args.secrets_file, "wb" if args.force else "xb") as f:
-        # Dump the secrets to the file
-        f.write(secrets)
+        f.write(secrets_blob)
 
-    # For your own debugging. Feel free to remove
     logger.success(f"Wrote secrets to {str(args.secrets_file.absolute())}")
 
 
