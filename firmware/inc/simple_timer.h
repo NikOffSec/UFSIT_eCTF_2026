@@ -7,7 +7,7 @@
 // Constant Clock and Timer Config structs for passing to the function
 
 static const DL_TimerG_ClockConfig gTIMER_0ClockConfig = {
-    .clockSel    = DL_TIMER_CLOCK_MFCLK,
+    .clockSel    = DL_TIMER_CLOCK_BUSCLK,
     .divideRatio = DL_TIMER_CLOCK_DIVIDE_8,
     .prescale    = 0U,
 };
