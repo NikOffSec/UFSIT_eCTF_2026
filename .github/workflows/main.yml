@@ -30,15 +30,6 @@ jobs:
           "${{ secrets.ectf_token }}" \
           "git@github.com:niklasekebergh-hub/UFSIT_eCTF_2026.git" \
           "https://api.ectf.mitre.org" | uvx ectf config
-
-      - name: Submit latest commit
-        run: |
-          echo "Submitting commit: $GITHUB_SHA"
-          uvx ectf api test submit "$GITHUB_SHA"
-
-      - name: Wait for testing to pass or fail
-        run: |
-          echo "WIP"
           
       - name: Submit test
         id: submit
