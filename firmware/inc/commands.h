@@ -14,11 +14,11 @@
 #ifndef __COMMANDS_H__
 #define __COMMANDS_H__
 
+#include "secrets.h"
 #include "security.h"
 #include "stdint.h"
 #include "simple_flash.h"
 #include "filesystem.h"
-#include "secrets.h"
 
 #ifdef CRYPTO_EXAMPLE
 #include "simple_crypto.h"
