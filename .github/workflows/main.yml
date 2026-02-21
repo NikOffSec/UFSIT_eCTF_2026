@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - "release"   # run on all branches (change if you want)
-      - "CICD-test"
+      #- "CICD-test"
   workflow_dispatch:
 
 jobs:
