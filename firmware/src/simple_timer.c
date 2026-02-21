@@ -21,10 +21,22 @@ int timer_init() {
     DL_TimerG_enableInterrupt(TIMER_0_INST , DL_TIMERG_INTERRUPT_ZERO_EVENT);
     DL_TimerG_enableClock(TIMER_0_INST);
 
-    print_debug("Waiting for initial Timer setup");
+    print_debug("Timer set up!");
+
+    print_debug("First timer start");
     DL_TimerG_startCounter(TIMER_0_INST);
     while(DL_Timer_isRunning(TIMER_0_INST));
-    print_debug("Timer Finished!");
+    print_debug("First timer Finished!");
+
+    print_debug("Second timer start");
+    DL_TimerG_startCounter(TIMER_0_INST);
+    while(DL_Timer_isRunning(TIMER_0_INST));
+    print_debug("Second timer Finished!");
+
+    print_debug("Third timer start");
+    DL_TimerG_startCounter(TIMER_0_INST);
+    while(DL_Timer_isRunning(TIMER_0_INST));
+    print_debug("Third timer Finished!");
 
     return 0;
 }
