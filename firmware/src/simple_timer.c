@@ -6,7 +6,6 @@ int timer_init() {
 
     print_debug("[DEBUG] Awakening the Timer module.");
 
-    SYSCFG_DL_initPower();
     DL_TimerG_reset(TIMER_0_INST);
     DL_TimerG_enablePower(TIMER_0_INST);
     delay_cycles(POWER_STARTUP_DELAY);
