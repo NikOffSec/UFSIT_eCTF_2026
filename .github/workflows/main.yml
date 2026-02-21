@@ -22,6 +22,12 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
+      - name: Debug wolfssl headers
+        run: |
+          ls wolfssl || true
+          ls wolfssl/wolfcrypt || true
+          ls wolfssl/wolfcrypt/aes.h || true
+
       - name: Verify ectf command
         run: |
           uvx ectf --help
