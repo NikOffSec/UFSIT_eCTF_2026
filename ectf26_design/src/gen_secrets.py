@@ -6,6 +6,7 @@ Modified for eCTF Key Generation
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from loguru import logger
@@ -49,9 +50,13 @@ def gen_secrets(groups: list[int]) -> bytes:
             "public_key": pub_hex
         }
 
+    aes_bytes = os.urandom(16)
+    aes_bytes = aes_bytes.hex()
+
     secrets = {
         "groups": groups,
         "group_keys": group_crypto_data,
+        "aes_bytes": aes_bytes,
     }
 
     return json.dumps(secrets, indent=4).encode()
