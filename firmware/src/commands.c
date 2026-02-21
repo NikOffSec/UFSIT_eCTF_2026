@@ -14,14 +14,11 @@
 #include "host_messaging.h"
 #include "commands.h"
 #include "filesystem.h"
+#include "simple_trng.h"
 
 /* IMPORTANT COMPONENTS FROM HSM.c */
 // extern file_t hsm_status[MAX_FILE_COUNT];
 static file_t current_file;
-
-int trng_generate(){
-    return 1;
-}
 
 /**********************************************************
  ******************** HELPER FUNCTIONS ********************
