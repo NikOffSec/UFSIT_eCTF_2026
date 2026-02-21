@@ -19,3 +19,4 @@ static const DL_TimerG_TimerConfig gTIMER_0TimerConfig = {
 };
 
 int timer_init();
+void timer_wait_5s();
