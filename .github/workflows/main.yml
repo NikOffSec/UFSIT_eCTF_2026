@@ -1,0 +1,42 @@
+name: eCTF Test Submit
+
+on:
+  push:
+    branches:
+      - "release"   # run on all branches (change if you want)
+      - "CICD-test"
+  workflow_dispatch:
+
+jobs:
+  ectf:
+    runs-on: ubuntu-latest
+
+    steps:
+#      - name: Checkout repo
+#        uses: actions/checkout@v4
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Verify ectf command
+        run: |
+          uvx ectf --help
+
+      - name: Configure ectf
+        run: |
+          printf "%s\n%s\n%s\n" \
+          "${{ secrets.ectf_token }}" \
+          "git@github.com:niklasekebergh-hub/UFSIT_eCTF_2026.git" \
+          "https://api.ectf.mitre.org" | uvx ectf config
+
+      - name: Submit latest commit
+        run: |
+          echo "Submitting commit: $GITHUB_SHA"
+          uvx ectf api test submit "$GITHUB_SHA"
+
+      - name: Wait for testing to pass or fail
+        run: |
+          echo "WIP"
+          
