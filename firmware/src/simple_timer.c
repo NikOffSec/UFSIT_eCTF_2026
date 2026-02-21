@@ -17,6 +17,7 @@ int timer_init() {
 
     DL_TimerG_setClockConfig(TIMER_0_INST, (DL_TimerG_ClockConfig*)&gTIMER_0ClockConfig);
     DL_TimerG_initTimerMode(TIMER_0_INST, (DL_TimerG_TimerConfig*)&gTIMER_0TimerConfig);
+    DL_Timer_setCounterRepeatMode(TIMER_0_INST, DL_TIMER_REPEAT_MODE_DISABLED);
     DL_TimerG_enableInterrupt(TIMER_0_INST , DL_TIMERG_INTERRUPT_ZERO_EVENT);
     DL_TimerG_enableClock(TIMER_0_INST);
 
