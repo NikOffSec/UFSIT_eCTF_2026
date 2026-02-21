@@ -23,13 +23,7 @@ int timer_init() {
 
     print_debug("Waiting for initial Timer setup");
     DL_TimerG_startCounter(TIMER_0_INST);
-    unsigned int temp = -1;
-    char output_buf[128] = {0};
-    while(DL_Timer_isRunning(TIMER_0_INST)) {
-        temp = DL_Timer_getRawInterruptStatus(TIMER_0_INST, 0xFFFFFFFF);
-        snprintf(output_buf, sizeof(output_buf)-1, "[DEBUG] Timer Status: %08x", temp); print_debug(output_buf);
-
-    }
+    while(DL_Timer_isRunning(TIMER_0_INST));
     print_debug("Timer Finished!");
 
     return 0;
