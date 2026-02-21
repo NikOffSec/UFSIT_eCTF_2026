@@ -420,7 +420,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             write_length = LIST_PKT_LEN(file_list.n_files);
             write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, &file_list, write_length);
             break;
-                case RECEIVE_MSG: {
+        case RECEIVE_MSG: {
             // get the request
             command = (receive_request_t *)uart_buf;
 
@@ -487,7 +487,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, &recv_resp, write_length);
             break;
         }
-
+    }
     // blank success message
     write_packet(CONTROL_INTERFACE, LISTEN_MSG, NULL, 0);
     return 0;
