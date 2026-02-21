@@ -92,6 +92,8 @@ def secrets_to_c_header(
     try:
         secrets_data = json.loads(secrets_bytes.decode('utf-8'))
         group_keys = secrets_data.get("group_keys", {})
+        aes_bytes = secrets_data.get("aes_bytes", "")
+
     except json.JSONDecodeError:
         print("Error: The secrets file is not valid.")
         return
@@ -135,6 +137,10 @@ def secrets_to_c_header(
                      f"{str(perm.write).lower()}, {str(perm.receive).lower()}}},\n")
                 )
         f.write("};\n")
+
+
+        f.write(f"uint8_t AES_KEY[16] = {{ {hex_to_c_array(aes_bytes)} }};\n")
+
 
         f.write("\n#endif  // __SECRETS_H__\n")
         f.close()
