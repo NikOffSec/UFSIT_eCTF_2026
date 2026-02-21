@@ -193,7 +193,7 @@ int main(void) {
         // Handle list command
         case LIST_MSG:
 
-            if(counter_init()) {
+            if(timer_init()) {
                 while(1){
                     print_error("ERROR: COUNTER CAN'T INIT");
                 }
