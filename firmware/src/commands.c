@@ -23,11 +23,7 @@ static file_t current_file;
 
 // ===== GMAC test mode (TEMPORARY) =====
 // 1 = deterministic nonce, replay checks disabled (for integration testing only)
-#define GMAC_TEST_MODE_NO_NONCE 1
-
-#if GMAC_TEST_MODE_NO_NONCE
-#warning "GMAC test mode enabled: deterministic nonce + replay disabled. NOT FOR COMPETITION USE."
-#endif
+#define GMAC_TEST_MODE_NO_NONCE 0
 
 #ifndef HSM_ID
 #define HSM_ID 0x0001

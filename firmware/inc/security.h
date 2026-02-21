@@ -33,6 +33,11 @@ typedef struct {
     bool receive;
 } group_permission_t;
 
+
+int trng_get_bytes(uint8_t *out, size_t len);
+
+bool nonce_accept(uint16_t sender_id, const uint8_t *nonce, size_t nonce_len);
+
 /** @brief Validate a pin against the HSM's pin
  *
  *  @param pin Requested pin to validate.
