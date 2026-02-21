@@ -112,7 +112,7 @@ extern "C" {
 
 /* Defines for TIMER_0 */
 #define TIMER_0_INST                                                     (TIMG12)
-#define TIMER_0_INST_LOAD_VALUE                                            (32000000/8*5)
+#define TIMER_0_INST_LOAD_VALUE                                          (5)
 
 
 
