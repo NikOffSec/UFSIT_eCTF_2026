@@ -36,6 +36,7 @@ jobs:
       - name: Submit test
         id: submit
         run: |
+          echo "$GITHUB_SHA"
           OUTPUT=$(uvx ectf api test submit "$GITHUB_SHA")
           echo "$OUTPUT"
           TEST_ID=$(echo "$OUTPUT" | grep -oE '[a-f0-9-]{36}')
