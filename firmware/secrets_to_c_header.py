@@ -118,10 +118,10 @@ def secrets_to_c_header(
             pub_hex = keys['public_key']
             priv_hex = keys['private_key']
 
-            f.write(f"const uint8_t Group{gid}_Public[32] = {{ {hex_to_c_array(pub_hex)} }};\n")
+            f.write(f"static const uint8_t Group{gid}_Public[32] = {{ {hex_to_c_array(pub_hex)} }};\n")
 
 
-            f.write(f"const uint8_t Group{gid}_Private[32] = {{ {hex_to_c_array(priv_hex)} }};\n")
+            f.write(f"static const uint8_t Group{gid}_Private[32] = {{ {hex_to_c_array(priv_hex)} }};\n")
             f.write("\n")
 
         f.write("const static group_permission_t global_permissions[] = {\n")
@@ -139,7 +139,7 @@ def secrets_to_c_header(
         f.write("};\n")
 
 
-        f.write(f"uint8_t AES_KEY[16] = {{ {hex_to_c_array(aes_bytes)} }};\n")
+        f.write(f"static const uint8_t AES_KEY[16] = {{ {hex_to_c_array(aes_bytes)} }};\n")
 
 
         f.write("\n#endif  // __SECRETS_H__\n")
