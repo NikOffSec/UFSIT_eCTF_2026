@@ -1,5 +1,5 @@
 #include <ti/devices/msp/msp.h>
-#include <ti/driverlib/dl_timer.h>
+#include <ti/driverlib/dl_timerg.h>
 #include "ti_msp_dl_config.h"
 
 #include "host_messaging.h"
