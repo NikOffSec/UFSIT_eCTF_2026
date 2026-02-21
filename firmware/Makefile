@@ -9,10 +9,13 @@ BUILDDIR ?= /tmp/build
 VPATH = "src"
 LINKERFILE = "firmware.ld"
 
-# to download wolfssl for the simple crypto example, `cd ./firmware/ && git clone https://github.com/wolfSSL/wolfssl`
-# then set this variable to 1
+# to download wolfssl for the simple crypto example / GMAC:
+#   cd ./firmware && git clone https://github.com/wolfSSL/wolfssl
 CRYPTO_EXAMPLE = 0
 USE_WOLFCRYPT_GMAC = 1
+
+# Shared wolfCrypt source path
+WOLFSSL_INC = wolfssl/wolfcrypt/src
 
 OBJECTS = $(BUILDDIR)/HSM.so \
     $(BUILDDIR)/simple_uart.so \
@@ -25,56 +28,9 @@ OBJECTS = $(BUILDDIR)/HSM.so \
     $(BUILDDIR)/commands.so \
     $(BUILDDIR)/gmac.so
 
-ifeq ($(USE_WOLFCRYPT_GMAC), 1)
-# You must clone wolfssl into firmware/wolfssl first
-#   cd firmware && git clone https://github.com/wolfSSL/wolfssl
-
-CFLAGS += -I./wolfssl
-
-# Bare-metal / minimal wolfCrypt settings
-CFLAGS += -DNO_WOLFSSL_DIR
-CFLAGS += -DSINGLE_THREADED
-CFLAGS += -DNO_FILESYSTEM
-CFLAGS += -DNO_DEV_RANDOM
-CFLAGS += -DWC_NO_DEFAULT_DEVID
-CFLAGS += -DNO_WRITEV
-CFLAGS += -DTIME_T_NOT_64BIT
-
-# Reduce feature surface (optional but recommended)
-CFLAGS += -DNO_MD5
-CFLAGS += -DNO_SHA
-CFLAGS += -DNO_SHA256
-CFLAGS += -DNO_RSA
-CFLAGS += -DNO_DH
-CFLAGS += -DNO_DSA
-CFLAGS += -DNO_PWDBASED
-CFLAGS += -DNO_HMAC
-CFLAGS += -DNO_CODING
-CFLAGS += -DNO_ASN
-CFLAGS += -DNO_CERTS
-CFLAGS += -DNO_SESSION_CACHE
-
-# AES-GCM support
-CFLAGS += -DHAVE_AESGCM
-
-WOLFSSL_SRC = wolfssl/wolfcrypt/src
-
-# aes.c is required for GCM/GMAC
-OBJECTS += $(WOLFSSL_SRC)/aes.o
-
-# If linker complains about unresolved wolfCrypt support symbols,
-# uncomment the next line(s):
-# OBJECTS += $(WOLFSSL_SRC)/error.o
-# OBJECTS += $(WOLFSSL_SRC)/wc_port.o
-# OBJECTS += $(WOLFSSL_SRC)/misc.o
-endif
-
-ifeq ($(USE_WOLFCRYPT_GMAC), 1)
-$(WOLFSSL_SRC)/%.o: $(WOLFSSL_SRC)/%.c
-	@ echo Building $@
-	@ $(CC) $(CFLAGS) -c $< -o $@
-endif
-
+# -----------------------------------------------------------------------------
+# Optional original crypto example (kept intact)
+# -----------------------------------------------------------------------------
 ifeq ($(CRYPTO_EXAMPLE), 1)
 OBJECTS += $(BUILDDIR)/simple_crypto.so
 
@@ -83,7 +39,7 @@ CFLAGS += -DCRYPTO_EXAMPLE=1
 CFLAGS += -DNO_WOLFSSL_DIR
 CFLAGS += -DWOLFSSL_AES_DIRECT
 CFLAGS += -DSINGLE_THREADED
-# From https://www.wolfssl.com/documentation/manuals/wolfssl/chapter02.html#building-with-gcc-arm
+# From wolfSSL ARM bare-metal guidance
 CFLAGS += -DHAVE_PK_CALLBACKS
 CFLAGS += -DWOLFSSL_USER_IO
 CFLAGS += -DNO_WRITEV -DTIME_T_NOT_64BIT
@@ -94,12 +50,29 @@ CFLAGS += -DNO_DEV_RANDOM
 CFLAGS += -DWC_NO_DEFAULT_DEVID
 CFLAGS += -DWOLF_CRYPTO_CB
 
-WOLFSSL_INC = wolfssl/wolfcrypt/src
 CFLAGS += -I./wolfssl
 
 # we need to build these objects for the simple crypto example
 OBJECTS += $(WOLFSSL_INC)/aes.o $(WOLFSSL_INC)/hash.o
 OBJECTS += $(WOLFSSL_INC)/md5.o $(WOLFSSL_INC)/cryptocb.o
+endif
+
+# -----------------------------------------------------------------------------
+# GMAC + wolfCrypt integration (AES-GCM only)
+# NOTE: Keep algorithm disable macros in ./inc/user_settings.h to avoid
+#       macro redefinition warnings. This block only wires include paths and
+#       user-settings activation.
+# -----------------------------------------------------------------------------
+ifeq ($(USE_WOLFCRYPT_GMAC), 1)
+CFLAGS += -I./wolfssl
+CFLAGS += -I./inc
+CFLAGS += -DWOLFSSL_USER_SETTINGS
+
+# Required wolfCrypt objects for wc_AesGcmSetKey / wc_AesGcmEncrypt
+OBJECTS += $(WOLFSSL_INC)/aes.o
+OBJECTS += $(WOLFSSL_INC)/error.o
+OBJECTS += $(WOLFSSL_INC)/wc_port.o
+OBJECTS += $(WOLFSSL_INC)/misc.o
 endif
 
 NAME = hsm
@@ -109,7 +82,7 @@ CFLAGS += -I.. \
     -O2 \
     "-I$(MSPM0_SDK_INSTALL_DIR)/source/third_party/CMSIS/Core/Include" \
     "-I$(MSPM0_SDK_INSTALL_DIR)/source" \
-	"-I./inc" \
+    "-I./inc" \
     -gdwarf-3 \
     -mcpu=cortex-m0plus \
     -march=thumbv6m \
@@ -137,8 +110,8 @@ $(BUILDDIR)/%.so: ./src/%.c | $(BUILDDIR)
 	@ echo Building $@
 	@ $(CC) $(CFLAGS) -c $< -o $@
 
-# if compiling with the crypto example, compile all crypto objects
-ifeq ($(CRYPTO_EXAMPLE), 1)
+# Build wolfCrypt source objects whenever either path needs them
+ifneq ($(filter 1,$(CRYPTO_EXAMPLE) $(USE_WOLFCRYPT_GMAC)),)
 $(WOLFSSL_INC)/%.o: $(WOLFSSL_INC)/%.c
 	@ echo Building $@
 	@ $(CC) $(CFLAGS) -c $< -o $@
@@ -146,7 +119,7 @@ endif
 
 $(BUILDDIR)/$(NAME).elf: $(OBJECTS)
 	@ echo linking $@
-	@ $(LNK) -Wl,-u,_c_int00 $(OBJECTS)  $(LFLAGS) -o $(BUILDDIR)/$(NAME).elf
+	@ $(LNK) -Wl,-u,_c_int00 $(OBJECTS) $(LFLAGS) -o $(BUILDDIR)/$(NAME).elf
 
 $(BUILDDIR)/$(NAME).bin: $(BUILDDIR)/$(NAME).elf
 	@ $(OBJCOPY) -O binary $(BUILDDIR)/$(NAME).elf $(BUILDDIR)/$(NAME).bin
