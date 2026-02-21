@@ -110,7 +110,9 @@ extern "C" {
 #define UART_1_IBRD_32_MHZ_115200_BAUD                                      (17)
 #define UART_1_FBRD_32_MHZ_115200_BAUD                                      (23)
 
-
+/* Defines for TIMER_0 */
+#define TIMER_0_INST                                                     (TIMG0)
+#define TIMER_0_INST_LOAD_VALUE                                            (32000000/8*5)
 
 
 
