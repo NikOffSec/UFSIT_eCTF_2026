@@ -27,8 +27,6 @@
 //#define HASH_SIZE 28
 #define HASH_SIZE MD5_DIGEST_SIZE
 
-extern uint8_t AES_KEY[16]; 
-
 /******************************** FUNCTION PROTOTYPES ********************************/
 /** @brief Encrypts plaintext using a symmetric cipher
  *

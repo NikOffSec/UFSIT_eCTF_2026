@@ -18,11 +18,6 @@
 #include <stdint.h>
 #include <string.h>
 
-
-// TEMP KEY
-// Remove once gen secrets is setup to generate this
-uint8_t AES_KEY[16] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-
 /******************************** FUNCTION PROTOTYPES ********************************/
 /** @brief Encrypts plaintext using a symmetric cipher
  *
