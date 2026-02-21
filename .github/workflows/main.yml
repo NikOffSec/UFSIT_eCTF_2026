@@ -40,3 +40,37 @@ jobs:
         run: |
           echo "WIP"
           
+      - name: Submit test
+        id: submit
+        run: |
+          OUTPUT=$(uvx ectf api test submit "$GITHUB_SHA")
+          echo "$OUTPUT"
+          TEST_ID=$(echo "$OUTPUT" | grep -oE '[a-f0-9-]{36}')
+          echo "test_id=$TEST_ID" >> $GITHUB_OUTPUT
+
+      - name: Wait for test result
+        run: |
+          TEST_ID="${{ steps.submit.outputs.test_id }}"
+          echo "Waiting on test $TEST_ID"
+
+          while true; do
+            STATUS=$(uvx ectf api test ls | awk -v id="$TEST_ID" '$1 == id {print $3}')
+
+            if [ -z "$STATUS" ]; then
+              echo "Test not found yet..."
+            else
+              echo "Status: $STATUS"
+            fi
+
+            if [ "$STATUS" = "Succeeded" ]; then
+              echo "Test succeeded"
+              exit 0
+            fi
+
+            if [ "$STATUS" = "Failed" ]; then
+              echo "Test failed"
+              exit 1
+            fi
+
+            sleep 30
+          done
