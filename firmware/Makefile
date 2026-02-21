@@ -12,6 +12,7 @@ LINKERFILE = "firmware.ld"
 # to download wolfssl for the simple crypto example, `cd ./firmware/ && git clone https://github.com/wolfSSL/wolfssl`
 # then set this variable to 1
 CRYPTO_EXAMPLE = 0
+USE_WOLFCRYPT_GMAC = 1
 
 OBJECTS = $(BUILDDIR)/HSM.so \
     $(BUILDDIR)/simple_uart.so \
@@ -23,6 +24,56 @@ OBJECTS = $(BUILDDIR)/HSM.so \
     $(BUILDDIR)/filesystem.so \
     $(BUILDDIR)/commands.so \
     $(BUILDDIR)/gmac.so
+
+ifeq ($(USE_WOLFCRYPT_GMAC), 1)
+# You must clone wolfssl into firmware/wolfssl first
+#   cd firmware && git clone https://github.com/wolfSSL/wolfssl
+
+CFLAGS += -I./wolfssl
+
+# Bare-metal / minimal wolfCrypt settings
+CFLAGS += -DNO_WOLFSSL_DIR
+CFLAGS += -DSINGLE_THREADED
+CFLAGS += -DNO_FILESYSTEM
+CFLAGS += -DNO_DEV_RANDOM
+CFLAGS += -DWC_NO_DEFAULT_DEVID
+CFLAGS += -DNO_WRITEV
+CFLAGS += -DTIME_T_NOT_64BIT
+
+# Reduce feature surface (optional but recommended)
+CFLAGS += -DNO_MD5
+CFLAGS += -DNO_SHA
+CFLAGS += -DNO_SHA256
+CFLAGS += -DNO_RSA
+CFLAGS += -DNO_DH
+CFLAGS += -DNO_DSA
+CFLAGS += -DNO_PWDBASED
+CFLAGS += -DNO_HMAC
+CFLAGS += -DNO_CODING
+CFLAGS += -DNO_ASN
+CFLAGS += -DNO_CERTS
+CFLAGS += -DNO_SESSION_CACHE
+
+# AES-GCM support
+CFLAGS += -DHAVE_AESGCM
+
+WOLFSSL_SRC = wolfssl/wolfcrypt/src
+
+# aes.c is required for GCM/GMAC
+OBJECTS += $(WOLFSSL_SRC)/aes.o
+
+# If linker complains about unresolved wolfCrypt support symbols,
+# uncomment the next line(s):
+# OBJECTS += $(WOLFSSL_SRC)/error.o
+# OBJECTS += $(WOLFSSL_SRC)/wc_port.o
+# OBJECTS += $(WOLFSSL_SRC)/misc.o
+endif
+
+ifeq ($(USE_WOLFCRYPT_GMAC), 1)
+$(WOLFSSL_SRC)/%.o: $(WOLFSSL_SRC)/%.c
+	@ echo Building $@
+	@ $(CC) $(CFLAGS) -c $< -o $@
+endif
 
 ifeq ($(CRYPTO_EXAMPLE), 1)
 OBJECTS += $(BUILDDIR)/simple_crypto.so

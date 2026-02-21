@@ -324,9 +324,6 @@ if (gmac_compute_tag(GMAC_KEY, request.nonce, aad, aad_len, request.tag) != 0) {
     return -1;
 }
 
-// TEST ONLY (force tag mismatch)
-request.tag[0] ^= 0x01;
-
     // request the file from the neighboring device
     write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&request, sizeof(receive_request_t));
 
