@@ -22,7 +22,7 @@ int timer_init() {
     DL_TimerG_enableClock(TIMER_0_INST);
 
     print_debug("Waiting for initial Timer setup");
-    DL_TimerG_startCounter(TIMER_0_INST);
+    //DL_TimerG_startCounter(TIMER_0_INST);
     unsigned int temp = -1;
     char output_buf[128] = {0};
     while(DL_Timer_isRunning(TIMER_0_INST)) {
