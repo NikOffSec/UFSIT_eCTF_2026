@@ -199,7 +199,6 @@ int main(void) {
 
         // Handle list command
         case LIST_MSG:
-
             STATUS_LED_OFF();
             list(pkt_len, uart_buf);
             break;
