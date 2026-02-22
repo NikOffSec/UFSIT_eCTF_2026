@@ -361,16 +361,25 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
     // request the file list from the neighboring device
     write_packet(TRANSFER_INTERFACE, INTERROGATE_SETUP_MSG, NULL, 0);
 
+    print_debug("Initial request sent");
+
     // Expect a INTERROGATE_SETUP_MSG message back for setup stuff
     len_recv_msg = sizeof(interrogate_request_setup_t);
     read_packet(TRANSFER_INTERFACE, &cmd, (void*)&interrogate_setup, &len_recv_msg);
+
+    if (cmd != INTERROGATE_SETUP_MSG) {
+        print_error("Opcode mismatch");
+        return -1;
+    }
+
+    print_debug("got back interrogate_setup");
 
     // Send permissions
     memset(&interrogate_request, 0, sizeof(interrogate_request_t));
     memcpy(&interrogate_request.permissions, &global_permissions, sizeof(group_permission_t) * MAX_PERMS);
     write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, &interrogate_request, sizeof(interrogate_request_t));
     
-
+    print_debug("Sent back my permission list");
 
     // UFSIT - cole - check to make sure that this is right
     len_recv_msg = sizeof(list_response_t);
@@ -421,6 +430,8 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             memset(&interrogate_setup, 0, sizeof(interrogate_request_setup_t));
             write_packet(TRANSFER_INTERFACE, RECEIVE_SETUP_MSG, (void *)&tmp_command_buffer, sizeof(interrogate_request_setup_t));
 
+            print_debug("Sent back setup message");
+
             // At this point the other HSM should send back it's list of permissions
             read_length = sizeof(interrogate_request);
             read_packet(TRANSFER_INTERFACE, &cmd, &interrogate_request, &read_length);
@@ -429,6 +440,8 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
                 print_error("INTERROGATE: Opcode mismatch");
                 return -1;
             }
+
+            print_debug("Got back permission list");
             
             /*
             https://rules.ectf.mitre.org/2026/specs/host_interface.html#interrogate-files
@@ -441,7 +454,9 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             memset(&file_list, 0, sizeof(file_list));
 
             // generate a list of files for the other device
-            generate_list_files_perm_check(&file_list, &interrogate_request);
+            generate_list_files_perm_check(&file_list, &interrogate_request.permissions);
+
+            print_debug("perm check passed");
 
             // send the list of files on this device
             write_length = LIST_PKT_LEN(file_list.n_files);
