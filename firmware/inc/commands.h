@@ -24,7 +24,6 @@
 #include "simple_crypto.h"
 #endif
 
-
 #define pkt_len_t uint16_t
 
 // Pin will be 6 hex characters 0-9,a-f

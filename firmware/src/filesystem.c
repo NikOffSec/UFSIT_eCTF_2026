@@ -126,9 +126,13 @@ int write_file(slot_t slot, file_t *src, uint8_t *uuid) {
 int read_file(slot_t slot, file_t *dest) {
     int flash_addr, file_size;
 
+	if (slot < 0 || slot >= MAX_FILE_COUNT){
+		return -1;
+	}
     flash_addr = FILE_ALLOCATION_TABLE[slot].flash_addr;
     file_size = FILE_ALLOCATION_TABLE[slot].length;
-    if (flash_addr < 0 || file_size < 0) {
+
+    if (flash_addr < 0 || file_size < 0 || file_size >= 8192) {
         return -1;
     }
     flash_simple_read(flash_addr, dest, file_size);
