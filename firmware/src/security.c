@@ -14,12 +14,12 @@
 #include "host_messaging.h"
 
 bool check_pin(unsigned char *pin) {
-    print_debug("Checking PIN\n");
+    
+    if(memcmp(pin, HSM_PIN, sizeof(HSM_PIN - 1))) {
+        timer_wait_5s();
+        return false;
+    }
 
-    // TODO: the reference design doesn't implement *ANY* security.
-    // This function currently does nothing. Your team should add the
-    // appropriate security checks here to implement the security
-    // requirements.
     return true;
 }
 
