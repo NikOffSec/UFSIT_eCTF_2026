@@ -425,7 +425,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             read_length = sizeof(interrogate_request);
             read_packet(TRANSFER_INTERFACE, &cmd, &interrogate_request, &read_length);
 
-            if (cmd != INTERROGATE_SETUP_MSG) {
+            if (cmd != INTERROGATE_MSG) {
                 print_error("INTERROGATE: Opcode mismatch");
                 return -1;
             }
