@@ -29,6 +29,7 @@ typedef enum {
     READ_MSG = 'R',         // 'R' - 0x52
     WRITE_MSG = 'W',        // 'W' - 0x57
     RECEIVE_MSG = 'C',      // 'C' - 0x43
+    RECEIVE_SETUP_MSG = 'X',// 'X'
     INTERROGATE_MSG = 'I',  // 'I' - 0x49
     LISTEN_MSG = 'N',       // 'N' - 0x4e
     ACK_MSG = 'A',          // 'A' - 0x41

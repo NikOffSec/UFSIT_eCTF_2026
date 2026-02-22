@@ -6,6 +6,8 @@
 # `make clean` will remove build artifacts, both in the firmware
 # directory and the final output directory.
 
+.PHONY: FORCE
+
 docker:
 	docker build -t build-hsm ./firmware/
 
@@ -16,9 +18,10 @@ global.secrets:
 	@if [ -z "${GROUPS}" ]; then echo 'Must pass valid groups like:\r\n\tmake global.secrets GROUPS=1234\r\nor, if multiple groups defined:\r\n\tmake global.secrets GROUPS="1234 5678"' && false; fi
 	uvx --with-editable ./ectf26_design --from ectf26_design secrets global.secrets $(GROUPS)
 
-%.hsm:
+%.hsm: FORCE
 	@if [ ! -f global.secrets ]; then echo 'Must generate global secrets first with\r\n\tmake global.secrets' && false; fi
 	@if [ -z "${PIN}" ] || [ -z "${PERMS}" ]; then echo "Must provide PIN and permissions for HSM. For example:\r\n\tmake $@ PIN=123456 PERMS='1234=RWC'" && false; fi
+	sudo rm -rf $@
 	docker run --rm -v ./firmware:/hsm -v ./global.secrets:/secrets/global.secrets:ro -v ./$@:/out -e HSM_PIN=${PIN} -e PERMISSIONS='${PERMS}' build-hsm $(BUILDDIR)
 
 clean:

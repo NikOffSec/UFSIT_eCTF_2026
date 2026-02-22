@@ -121,6 +121,17 @@ def _parse_secrets_blob(secrets_blob: bytes) -> dict:
         mk = bytes.fromhex(crypto["master_key_hex"])
         if len(mk) != 16:
             raise ValueError(f"Master key must be 16 bytes, got {len(mk)}")
+            
+        # Optional AES key for teammate/session code
+    if "aes_bytes_hex" in crypto:
+        aesk = bytes.fromhex(crypto["aes_bytes_hex"])
+        if len(aesk) != 16:
+            raise ValueError(f"AES key must be 16 bytes, got {len(aesk)}")
+
+    # Optional per-group asymmetric keys
+    group_keys = data.get("group_keys", {})
+    if group_keys and not isinstance(group_keys, dict):
+        raise ValueError("group_keys must be an object if present")
 
     return data
 
@@ -146,12 +157,16 @@ def _validate_permissions_against_groups(permissions: PermissionList, valid_grou
     if len(permissions) > MAX_PERMS:
         raise ValueError(f"Too many permissions entries ({len(permissions)}), MAX_PERMS={MAX_PERMS}")
 
+def hex_to_c_array(hex_str: str) -> str:
+    bytes_list = [f"0x{hex_str[i:i+2]}" for i in range(0, len(hex_str), 2)]
+    return ", ".join(bytes_list)
+
 
 def secrets_to_c_header(
-    permissions: PermissionList, path: str, hsm_pin: str, secrets: bytes
+        permissions: PermissionList, path: str, hsm_pin: str, secrets_bytes: bytes
 ):
     # Parse deployment secrets from gen_secrets.py output
-    secrets_data = _parse_secrets_blob(secrets)
+    secrets_data = _parse_secrets_blob(secrets_bytes)
     valid_groups = secrets_data["groups"]
     crypto = secrets_data["crypto"]
 
@@ -160,24 +175,29 @@ def secrets_to_c_header(
     gmac_key_hex = crypto["gmac_key_hex"]
     gmac_key_c = _hex_to_c_array(gmac_key_hex)
 
-    # Optional master key emission (useful if you want KDFs on-device later)
     master_key_hex = crypto.get("master_key_hex")
     master_key_c = _hex_to_c_array(master_key_hex) if master_key_hex else None
 
-    os.makedirs(path, exist_ok=True)
-    out_path = os.path.join(path, "secrets.h")
+    aes_key_hex = crypto.get("aes_bytes_hex")
+    aes_key_c = _hex_to_c_array(aes_key_hex) if aes_key_hex else None
 
-    with open(out_path, "w") as f:
+    group_keys = secrets_data.get("group_keys", {})
+
+    os.makedirs(path, exist_ok=True)
+    header_path = os.path.join(path, "secrets.h")
+
+    with open(header_path, "w") as f:
         f.write("#ifndef __SECRETS_H__\n")
         f.write("#define __SECRETS_H__\n\n")
 
         f.write('#include <stdint.h>\n')
+        f.write('#include <stdbool.h>\n')
         f.write('#include "security.h"\n\n')
 
-        # HSM PIN (existing behavior)
+        # HSM PIN
         f.write(f'#define HSM_PIN "{hsm_pin}"\n\n')
 
-        # Keys emitted from deployment secrets
+        # GMAC / master keys
         f.write("#define GMAC_KEY_LEN 16\n")
         f.write(f"static const uint8_t GMAC_KEY[GMAC_KEY_LEN] = {{{gmac_key_c}}};\n\n")
 
@@ -185,15 +205,34 @@ def secrets_to_c_header(
             f.write("#define MASTER_KEY_LEN 16\n")
             f.write(f"static const uint8_t MASTER_KEY[MASTER_KEY_LEN] = {{{master_key_c}}};\n\n")
 
-        # Emit valid deployment groups too (optional, but useful for debugging/validation)
+        # Optional AES key for teammate/session code compatibility
+        if aes_key_c is not None:
+            f.write("#define AES_KEY_LEN 16\n")
+            f.write(f"static const uint8_t AES_KEY[AES_KEY_LEN] = {{{aes_key_c}}};\n\n")
+
+        # Deployment groups
         groups_c = ", ".join(f"0x{(int(g) & 0xFFFF):04x}" for g in valid_groups)
         f.write(f"#define DEPLOYMENT_GROUP_COUNT {len(valid_groups)}\n")
         f.write(f"static const uint16_t DEPLOYMENT_GROUPS[DEPLOYMENT_GROUP_COUNT] = {{{groups_c}}};\n\n")
 
-        # Permissions table compiled into firmware
-        # Explicitly pad to MAX_PERMS so the array is deterministic and clear.
-        f.write("const static group_permission_t global_permissions[MAX_PERMS] = {\n")
+        # Optional per-group key material (Ed25519)
+        # Emits symbols keyed by numeric group ID for teammate use.
+        for gid_str in sorted(group_keys.keys(), key=lambda x: int(x)):
+            keys = group_keys[gid_str]
+            pub_hex = keys["public_key"]
+            priv_hex = keys["private_key"]
 
+            f.write(
+                f"static const uint8_t Group{int(gid_str)}_Public[32] = "
+                f"{{{_hex_to_c_array(pub_hex)}}};\n"
+            )
+            f.write(
+                f"static const uint8_t Group{int(gid_str)}_Private[32] = "
+                f"{{{_hex_to_c_array(priv_hex)}}};\n\n"
+            )
+
+        # Permissions table (deterministic padded)
+        f.write("const static group_permission_t global_permissions[MAX_PERMS] = {\n")
         for perm in permissions:
             f.write(
                 f"\t{{0x{perm.group_id:04x}, "
@@ -201,27 +240,28 @@ def secrets_to_c_header(
                 f"{str(perm.write).lower()}, "
                 f"{str(perm.receive).lower()}}},\n"
             )
-
         for _ in range(MAX_PERMS - len(permissions)):
-            # unused sentinel entry
             f.write("\t{0x0000, false, false, false},\n")
-
         f.write("};\n")
+
         f.write("\n#endif  // __SECRETS_H__\n")
+
+    with open(header_path, "r") as f:
+        print(f.read())
+
+    print(f"Successfully wrote header to {header_path}")
 
 
 if __name__ == "__main__":
     def parse_args():
         parser = argparse.ArgumentParser()
-
-        parser.add_argument("secrets", type=argparse.FileType("rb"), help="Path to secrets file")
+        parser.add_argument("secrets", type=argparse.FileType("rb"), help="Path to secrets file (JSON)")
         parser.add_argument("hsm_pin", type=str, help="User PIN for the HSM")
         parser.add_argument(
             "permissions",
             type=str,
-            help='List of colon-separated permissions. E.g., "1234=R--:4321=RWC"',
+            help='List of colon-separated permissions. E.g., "0001=R--:1111=RWC"',
         )
-
         return parser.parse_args()
 
     args = parse_args()

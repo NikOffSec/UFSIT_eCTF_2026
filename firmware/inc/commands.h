@@ -14,11 +14,15 @@
 #ifndef __COMMANDS_H__
 #define __COMMANDS_H__
 
+#include "secrets.h"
 #include "security.h"
 #include "stdint.h"
 #include "simple_flash.h"
 #include "filesystem.h"
-#include "secrets.h"
+
+#ifdef CRYPTO_EXAMPLE
+#include "simple_crypto.h"
+#endif
 
 #define pkt_len_t uint16_t
 
@@ -28,6 +32,10 @@
 
 // Pin will be 6 hex characters 0-9,a-f
 typedef unsigned char pin_t[6];
+
+// can support the largest struct size message size of the device for in place encryption/decryption
+#define MAX_COMMAND_SIZE 8272
+extern uint8_t tmp_command_buffer[MAX_COMMAND_SIZE];
 
 #define MAX_MSG_SIZE sizeof(write_command_t)
 
@@ -77,18 +85,26 @@ typedef struct {
     slot_t write_slot;
 } receive_command_t;
 
+/*
+ * Canonical receive request message (GMAC-authenticated AAD-based protocol).
+ * Tag authenticates the request metadata and permission blob.
+ */
 typedef struct {
     uint16_t sender_id;                 // stable per-firmware-image ID
     slot_t slot;
-    uint8_t nonce[GMAC_NONCE_LEN];      // challenge or sender nonce
+    uint8_t nonce[GMAC_NONCE_LEN];      // sender nonce / freshness value
     uint8_t perm_blob_len;              // actual bytes used in perm_blob
-    uint8_t perm_blob[PERM_BLOB_MAX];   // packed permissions
-    uint8_t tag[GMAC_TAG_LEN];          // GMAC over AAD
+    uint8_t perm_blob[PERM_BLOB_MAX];   // packed permissions (gid_hi, gid_lo, flags)
+    uint8_t tag[GMAC_TAG_LEN];          // GMAC over AAD (everything except tag)
 } receive_request_t;
 
+// Keep response type only if current receive/listen implementation still uses it
 typedef struct {
     uint8_t uuid[UUID_SIZE];
+    uint32_t internal_random_number;
     file_t file;
+    uint8_t padding[4];
+    uint8_t hash[HASH_SIZE];
 } receive_response_t;
 
 typedef struct {
@@ -111,60 +127,22 @@ typedef struct {
 
 #pragma pack(pop) // Tells the compiler to resume padding struct members
 
-/** @brief Perform the list operation
- *
- *  @param pkt_len The length of the incoming packet
- *  @param buf A pointer the incoming message buffer
- *
- * @return 0 upon success. A negative value on error.
-*/
+/** @brief Perform the list operation */
 int list(uint16_t pkt_len, uint8_t *buf);
 
-
-/** @brief Perform the read operation
- *
- *  @param pkt_len The length of the incoming packet
- *  @param buf A pointer the incoming message buffer
- *
- * @return 0 upon success. A negative value on error.
-*/
+/** @brief Perform the read operation */
 int read(uint16_t pkt_len, uint8_t *buf);
 
-
-/** @brief Perform the write operation
- *
- *  @param pkt_len The length of the incoming packet
- *  @param buf A pointer the incoming message buffer
- *
- * @return 0 upon success. A negative value on error.
-*/
+/** @brief Perform the write operation */
 int write(uint16_t pkt_len, uint8_t *buf);
 
-
-/** @brief Perform the receive operation
- *
- *  @param pkt_len The length of the incoming packet
- *  @param buf A pointer the incoming message buffer
- *
- * @return 0 upon success. A negative value on error.
-*/
+/** @brief Perform the receive operation */
 int receive(uint16_t pkt_len, uint8_t *buf);
 
-
-/** @brief Perform the interrogate operation
- *
- *  @param pkt_len The length of the incoming packet
- *  @param buf A pointer to the incoming message buffer
- *
- * @return 0 upon success. A negative value on error.
-*/
+/** @brief Perform the interrogate operation */
 int interrogate(uint16_t pkt_len, uint8_t *buf);
 
-
-/** @brief Perform the listen operation
- *
- * @return 0 upon success. A negative value on error.
-*/
+/** @brief Perform the listen operation */
 int listen(uint16_t pkt_len, uint8_t *buf);
 
 #endif // __COMMANDS_H__

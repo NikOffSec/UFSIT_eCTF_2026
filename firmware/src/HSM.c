@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <strings.h>
 
 #include "simple_flash.h"
 #include "host_messaging.h"
@@ -25,17 +26,20 @@
 #include "status_led.h"
 #include "simple_uart.h"
 
+#include "simple_trng.h"
+#include "simple_timer.h"
+
 /* Code between this #ifdef and the subsequent #endif will
-*  be ignored by the compiler if CRYPTO_EXAMPLE is not set in
-*  the Makefile. */
+ * be ignored by the compiler if CRYPTO_EXAMPLE is not set in
+ * the Makefile. */
 #ifdef CRYPTO_EXAMPLE
 /* The simple crypto example included with the reference design is
-*  intended to be an example of how you *may* use cryptography in your
-*  design. You are not limited nor required to use this interface in
-*  your design. It is recommended for newer teams to start by only using
-*  the simple crypto library until they have a working design. */
+ * intended to be an example of how you *may* use cryptography in your
+ * design. You are not limited nor required to use this interface in
+ * your design. It is recommended for newer teams to start by only using
+ * the simple crypto library until they have a working design. */
 #include "simple_crypto.h"
-#endif  //CRYPTO_EXAMPLE
+#endif  // CRYPTO_EXAMPLE
 
 /**********************************************************
  ************************ GLOBALS *************************
@@ -43,15 +47,13 @@
 
 static unsigned char uart_buf[MAX_MSG_SIZE];
 
-
 /**********************************************************
  ******************** HELPER FUNCTIONS ********************
  **********************************************************/
 
-
 /* Code between this #ifdef and the subsequent #endif will
-*  be ignored by the compiler if CRYPTO_EXAMPLE is not set in
-*  the projectk.mk file. */
+ * be ignored by the compiler if CRYPTO_EXAMPLE is not set in
+ * the project Makefile. */
 #ifdef CRYPTO_EXAMPLE
 void crypto_example(void) {
     // Example of how to utilize included simple_crypto.h
@@ -86,20 +88,31 @@ void crypto_example(void) {
     sprintf(output_buf, "Decrypted message: %s\n", decrypted);
     print_debug(output_buf);
 }
-#endif  //CRYPTO_EXAMPLE
+#endif  // CRYPTO_EXAMPLE
 
 /**********************************************************
  ********************* CORE FUNCTIONS *********************
  **********************************************************/
 
-
 /** @brief Initializes peripherals for system boot.
-*/
+ */
 void init() {
     // Initialize all of the hardware components
     SYSCFG_DL_init();
 
     init_fs();
+
+    if (trng_init()) {
+        while (1) {
+            print_error("ERROR: TRNG CAN'T INIT");
+        }
+    }
+
+    if (timer_init()) {
+        while (1) {
+            print_error("ERROR: COUNTER CAN'T INIT");
+        }
+    }
 }
 
 /**********************************************************
@@ -117,17 +130,21 @@ int main(void) {
 
     // process commands forever
     while (1) {
+
+        // Clear the input buffer so that sensitive data from a past session can't be yoinked!
+        memset(uart_buf, 0, sizeof(uart_buf));
+
         print_debug("Ready\n");
 
         STATUS_LED_ON();
 
-        pkt_len = 0;
+        // Fix buffer overflow from command line
+        pkt_len = sizeof(uart_buf);
         result = read_packet(CONTROL_INTERFACE, &cmd, uart_buf, &pkt_len);
 
         if (result != MSG_OK) {
             STATUS_LED_OFF();
-            switch (result)
-            {
+            switch (result) {
             case MSG_BAD_PTR:
                 print_error("Bad cmd pointer\n");
                 break;
@@ -149,14 +166,11 @@ int main(void) {
 
         // Handle list command
         case LIST_MSG:
-
 #ifdef CRYPTO_EXAMPLE
             // Run the crypto example
-            // TODO: Remove this from your design
+            // TODO: Remove this from your design before competition submission
             crypto_example();
-#endif // CRYPTO_EXAMPLE
-
-
+#endif  // CRYPTO_EXAMPLE
             STATUS_LED_OFF();
             list(pkt_len, uart_buf);
             break;

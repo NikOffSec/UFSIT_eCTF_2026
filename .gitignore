@@ -320,7 +320,9 @@ dmypy.json
 cython_debug/
 
 # WolfSSL
-wolfssl/
+wolfssl/*
+!wolfssl/wolfcrypt/
+!wolfssl/wolfcrypt/**
 
 # PyCharm
 #  JetBrains specific template is maintainted in a separate JetBrains.gitignore that can

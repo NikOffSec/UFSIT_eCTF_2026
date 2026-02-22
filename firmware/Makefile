@@ -9,12 +9,15 @@ BUILDDIR ?= /tmp/build
 VPATH = "src"
 LINKERFILE = "firmware.ld"
 
-# to download wolfssl for the simple crypto example / GMAC:
+# Optional organizer simple crypto example:
 #   cd ./firmware && git clone https://github.com/wolfSSL/wolfssl
+#   then set CRYPTO_EXAMPLE = 1
 CRYPTO_EXAMPLE = 0
+
+# Our production path: GMAC via wolfCrypt (AES-GCM/GMAC)
 USE_WOLFCRYPT_GMAC = 1
 
-# Shared wolfCrypt source path
+# wolfCrypt source object path (within wolfSSL checkout)
 WOLFSSL_INC = wolfssl/wolfcrypt/src
 
 OBJECTS = $(BUILDDIR)/HSM.so \
@@ -27,7 +30,8 @@ OBJECTS = $(BUILDDIR)/HSM.so \
     $(BUILDDIR)/filesystem.so \
     $(BUILDDIR)/commands.so \
     $(BUILDDIR)/gmac.so \
-    $(BUILDDIR)/simple_trng.so
+    $(BUILDDIR)/simple_trng.so \
+    $(BUILDDIR)/simple_timer.so
 
 # -----------------------------------------------------------------------------
 # Optional original crypto example (kept intact)
@@ -60,9 +64,8 @@ endif
 
 # -----------------------------------------------------------------------------
 # GMAC + wolfCrypt integration (AES-GCM only)
-# NOTE: Keep algorithm disable macros in ./inc/user_settings.h to avoid
-#       macro redefinition warnings. This block only wires include paths and
-#       user-settings activation.
+# NOTE: Keep algorithm enable/disable macros in ./inc/user_settings.h to avoid
+#       macro redefinition warnings. This block wires include paths + user settings.
 # -----------------------------------------------------------------------------
 ifeq ($(USE_WOLFCRYPT_GMAC), 1)
 CFLAGS += -I./wolfssl

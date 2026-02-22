@@ -10,10 +10,16 @@
  *
  * @copyright Copyright (c) 2026 The MITRE Corporation
  */
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdio.h>
+
 #include "security.h"
 #include "host_messaging.h"
 #include "secrets.h"
-#include "simple_crypto.h"
 #include "simple_trng.h"
 #include "gmac.h"
 
@@ -28,14 +34,46 @@ typedef struct {
 static nonce_entry_t g_nonce_cache[NONCE_CACHE_SLOTS];
 static uint8_t g_nonce_rr_idx = 0;
 
+/**********************************************************
+ ******************** HELPER FUNCTIONS ********************
+ **********************************************************/
+
 static bool ct_mem_eq(const uint8_t *a, const uint8_t *b, size_t n) {
     uint8_t diff = 0;
     for (size_t i = 0; i < n; i++) {
         diff |= (uint8_t)(a[i] ^ b[i]);
     }
-    return diff == 0;
+    return (diff == 0);
 }
 
+// Constant-time compare helper that returns 1 if equal, 0 otherwise
+static uint8_t ct_eq(const uint8_t *a, const uint8_t *b, size_t n) {
+    uint8_t diff = 0;
+    for (size_t i = 0; i < n; i++) {
+        diff |= (uint8_t)(a[i] ^ b[i]);
+    }
+
+    // Convert diff==0 to 1, else 0 (branchless-ish)
+    uint8_t x = (uint8_t)(diff | (uint8_t)(0u - diff));
+    return (uint8_t)((x >> 7) ^ 1u);
+}
+
+// Crude fault-hardening consistency check
+static uint8_t harden_decision(uint8_t ok) {
+    volatile uint8_t a = ok;
+    volatile uint8_t b = ok;
+    volatile uint8_t inv = (uint8_t)(ok ^ 1u);
+
+    // If a glitch flips one value, consistency check fails -> return 0
+    uint8_t consistent = (uint8_t)((a == b) & (a ^ inv));
+    return (uint8_t)(consistent & a);
+}
+
+/**********************************************************
+ ********************* CORE FUNCTIONS *********************
+ **********************************************************/
+
+// Reject exact nonce replay per sender_id, otherwise accept and cache
 bool nonce_accept(uint16_t sender_id, const uint8_t *nonce, size_t nonce_len) {
     if (nonce == NULL || nonce_len != GMAC_NONCE_LEN) {
         return false;
@@ -45,12 +83,13 @@ bool nonce_accept(uint16_t sender_id, const uint8_t *nonce, size_t nonce_len) {
     for (size_t i = 0; i < NONCE_CACHE_SLOTS; i++) {
         if (!g_nonce_cache[i].used) continue;
         if (g_nonce_cache[i].sender_id != sender_id) continue;
+
         if (ct_mem_eq(g_nonce_cache[i].nonce, nonce, GMAC_NONCE_LEN)) {
             return false; // replay detected
         }
     }
 
-    // Insert new nonce
+    // Insert into first free slot
     for (size_t i = 0; i < NONCE_CACHE_SLOTS; i++) {
         if (!g_nonce_cache[i].used) {
             g_nonce_cache[i].used = true;
@@ -60,16 +99,16 @@ bool nonce_accept(uint16_t sender_id, const uint8_t *nonce, size_t nonce_len) {
         }
     }
 
-    // Cache full: overwrite round-robin
+    // Cache full -> overwrite round-robin
     g_nonce_cache[g_nonce_rr_idx].used = true;
     g_nonce_cache[g_nonce_rr_idx].sender_id = sender_id;
     memcpy(g_nonce_cache[g_nonce_rr_idx].nonce, nonce, GMAC_NONCE_LEN);
-    g_nonce_rr_idx = (uint8_t)((g_nonce_rr_idx + 1) % NONCE_CACHE_SLOTS);
+    g_nonce_rr_idx = (uint8_t)((g_nonce_rr_idx + 1u) % NONCE_CACHE_SLOTS);
 
     return true;
 }
 
-// Retrieve a 12 byte nonce from the trng
+// Fill arbitrary-length buffer using repeated 32-bit TRNG outputs
 int trng_get_bytes(uint8_t *out, size_t len) {
     if (out == NULL) return -1;
 
@@ -78,52 +117,31 @@ int trng_get_bytes(uint8_t *out, size_t len) {
         uint32_t r = (uint32_t)trng_generate();
 
         // Pack little-endian bytes from the 32-bit word
-        out[i++] = (uint8_t)(r & 0xFF);
-        if (i < len) out[i++] = (uint8_t)((r >> 8) & 0xFF);
-        if (i < len) out[i++] = (uint8_t)((r >> 16) & 0xFF);
-        if (i < len) out[i++] = (uint8_t)((r >> 24) & 0xFF);
+        out[i++] = (uint8_t)(r & 0xFFu);
+        if (i < len) out[i++] = (uint8_t)((r >> 8) & 0xFFu);
+        if (i < len) out[i++] = (uint8_t)((r >> 16) & 0xFFu);
+        if (i < len) out[i++] = (uint8_t)((r >> 24) & 0xFFu);
     }
 
     return 0;
 }
 
-// A constant time comparison function
-// Returns 0 if they are not equal, returns 1 if they are
-static uint8_t ct_eq(const uint8_t *a, const uint8_t *b, size_t n) {
-    uint8_t diff = 0;
-    for (size_t i = 0; i < n; i++) {
-        diff |= (uint8_t)(a[i] ^ b[i]);
-    }
-    uint8_t x = (uint8_t)(diff | (uint8_t)(0u - diff));
-    return (uint8_t)((x >> 7) ^ 1u);
-}
-
-// Very crude fault hardening: verify the descision is internall consistent
-static uint8_t harden_decision(uint8_t ok) { 
-    volatile uint8_t a = ok;
-    volatile uint8_t b = ok;
-    volatile uint8_t inv = (uint8_t)(ok ^ 1u);
-
-    // If a glitch flips one value, consistency check fails --> return 0
-    uint8_t consistent = (uint8_t)((a == b) & ((a ^ inv) ));
-    return (uint8_t)(consistent & a);
-}
-
 bool check_pin(unsigned char *pin) {
     print_debug("Checking PIN\n");
+
     if (pin == NULL) return false;
 
     const uint8_t *ref = (const uint8_t *)HSM_PIN;
     const uint8_t *in  = (const uint8_t *)pin;
 
-    // Reduntant checks to secure against fault injection
+    // Redundant checks to make single-fault bypass harder
     uint8_t eq1 = ct_eq(in, ref, PIN_LENGTH);
     uint8_t eq2 = ct_eq(in, ref, PIN_LENGTH);
 
     uint8_t ok = (uint8_t)(eq1 & eq2);
     ok = harden_decision(ok);
 
-    return ok ? true : false;
+    return (ok != 0u);
 }
 
 bool validate_permission(uint16_t group_id, permission_enum_t perm) {
@@ -131,6 +149,7 @@ bool validate_permission(uint16_t group_id, permission_enum_t perm) {
 
     sprintf(output_buf, "Checking %c permissions for group: %hx\n", perm, group_id);
     print_debug(output_buf);
+
     for (uint8_t i = 0; i < MAX_PERMS; i++) {
         // Convention: unused slots have group_id == 0
         if (global_permissions[i].group_id == 0) {
@@ -150,46 +169,7 @@ bool validate_permission(uint16_t group_id, permission_enum_t perm) {
             }
         }
     }
+
     // Group not found => deny by default
     return false;
-}
-
-static uint8_t perm_flags(const group_permission_t *p) {
-    return (uint8_t)((p->read ? 1u : 0u) |
-                     (p->write ? 2u : 0u) |
-                     (p->receive ? 4u : 0u));
-}
-
-static size_t pack_permissions_sorted(const group_permission_t *in, size_t n,
-                                      uint8_t *out, size_t out_cap) {
-    // Make a local copy and sort it (n is small: MAX_PERMS=8)
-    group_permission_t tmp[MAX_PERMS];
-    size_t m = 0;
-
-    for (size_t i = 0; i < n; i++) {
-        if (in[i].group_id == 0) continue;   // your current sentinel
-        tmp[m++] = in[i];
-    }
-
-    // insertion sort (m <= 8)
-    for (size_t i = 1; i < m; i++) {
-        group_permission_t key = tmp[i];
-        size_t j = i;
-        while (j > 0 && tmp[j-1].group_id > key.group_id) {
-            tmp[j] = tmp[j-1];
-            j--;
-        }
-        tmp[j] = key;
-    }
-
-    size_t need = m * 3;
-    if (out_cap < need) return 0;
-
-    for (size_t i = 0; i < m; i++) {
-        uint16_t gid = tmp[i].group_id;
-        out[i*3 + 0] = (uint8_t)(gid >> 8);
-        out[i*3 + 1] = (uint8_t)(gid & 0xFF);
-        out[i*3 + 2] = perm_flags(&tmp[i]);
-    }
-    return need;
 }
