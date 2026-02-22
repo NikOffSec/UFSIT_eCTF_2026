@@ -4,14 +4,14 @@
 
 int timer_init() {
 
-    print_debug("[DEBUG] Awakening the Timer module.");
+    //print_debug("[DEBUG] Awakening the Timer module.");
 
     DL_TimerG_reset(TIMER_0_INST);
     DL_TimerG_enablePower(TIMER_0_INST);
     delay_cycles(POWER_STARTUP_DELAY);
 
     if (!(DL_Timer_isPowerEnabled(TIMER_0_INST))) {
-        print_debug("[DEBUG] Timer power not working. Abort");
+        //print_debug("[DEBUG] Timer power not working. Abort");
         return -1;
     }
 
@@ -21,15 +21,15 @@ int timer_init() {
     DL_TimerG_enableInterrupt(TIMER_0_INST , DL_TIMERG_INTERRUPT_ZERO_EVENT);
     DL_TimerG_enableClock(TIMER_0_INST);
 
-    print_debug("[DEBUG] Timer set up!");
+    //print_debug("[DEBUG] Timer set up!");
 
     return 0;
 }
 
 void timer_wait_5s() {
-    print_debug("[DEBUG] 5s Timer start");
+    //print_debug("[DEBUG] 5s Timer start");
     DL_TimerG_startCounter(TIMER_0_INST);
     while(DL_Timer_isRunning(TIMER_0_INST));
-    print_debug("[DEBUG] 5s Timer Finished!");
+    //print_debug("[DEBUG] 5s Timer Finished!");
     return;
 }
