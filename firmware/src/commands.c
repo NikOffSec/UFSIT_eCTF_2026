@@ -29,6 +29,14 @@ static file_t current_file;
 #define HSM_ID 0x0001
 #endif
 
+// ---- Attack simulation flags (TEST ONLY) ----
+// Choose ONE at a time.
+// #define ATTACK_FLIP_TAG_BIT
+// #define ATTACK_SPOOF_SENDER_ID
+// #define ATTACK_TAMPER_SLOT
+// #define ATTACK_REPLAY_DUPLICATE_SEND
+//
+//
 static int get_request_nonce(uint8_t nonce[GMAC_NONCE_LEN]) {
 #if GMAC_TEST_MODE_NO_NONCE
     // Deterministic evolving nonce for testing GMAC plumbing without TRNG
@@ -319,6 +327,33 @@ if (gmac_compute_tag(GMAC_KEY, request.nonce, aad, aad_len, request.tag) != 0) {
     print_error("GMAC tag generation failed");
     return -1;
 }
+
+#ifdef ATTACK_FLIP_TAG_BIT
+    // Simulate on-wire tag tampering
+    request.tag[0] ^= 0x01;
+    print_debug("[ATTACK] Flipped 1 bit in GMAC tag");
+#endif
+
+#ifdef ATTACK_SPOOF_SENDER_ID
+    // Simulate identity relabeling AFTER tag generation (should fail verify)
+    request.sender_id ^= 0x0001;
+    print_debug("[ATTACK] Spoofed sender_id after GMAC generation");
+#endif
+
+#ifdef ATTACK_TAMPER_SLOT
+    // Simulate AAD tamper (slot is authenticated in your AAD)
+    request.slot ^= 0x01;
+    print_debug("[ATTACK] Tampered slot after GMAC generation");
+#endif
+    
+    /* first send */
+write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&request, sizeof(receive_request_t));
+
+/* replay attack: resend exact same bytes */
+#ifdef ATTACK_REPLAY_DUPLICATE_SEND
+print_debug("[ATTACK] Re-sending exact same RECEIVE packet for replay test");
+write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&request, sizeof(receive_request_t));
+#endif
 
     // request the file from the neighboring device
     write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&request, sizeof(receive_request_t));
