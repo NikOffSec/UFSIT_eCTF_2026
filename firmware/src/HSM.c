@@ -199,13 +199,6 @@ int main(void) {
         // Handle list command
         case LIST_MSG:
 
-            
-
-            print_debug("Testing 3 Timers!");
-            timer_wait_5s();
-            timer_wait_5s();
-            timer_wait_5s();
-
             STATUS_LED_OFF();
             list(pkt_len, uart_buf);
             break;
