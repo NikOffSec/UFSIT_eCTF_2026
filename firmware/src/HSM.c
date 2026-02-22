@@ -134,6 +134,12 @@ void init() {
         }
     }
 
+    if(timer_init()) {
+        while(1){
+            print_error("ERROR: COUNTER CAN'T INIT");
+       }
+    }
+
     /* //FIXME: Uncomment this later for release
     if(counter_init()) {
         while(1){
@@ -193,11 +199,7 @@ int main(void) {
         // Handle list command
         case LIST_MSG:
 
-            if(timer_init()) {
-                while(1){
-                    print_error("ERROR: COUNTER CAN'T INIT");
-                }
-            }
+            
 
             print_debug("Testing 3 Timers!");
             timer_wait_5s();
