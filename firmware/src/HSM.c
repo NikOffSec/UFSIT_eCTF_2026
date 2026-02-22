@@ -27,6 +27,7 @@
 #include "simple_uart.h"
 
 #include "simple_trng.h"
+#include "simple_timer.h"
 
 /* Code between this #ifdef and the subsequent #endif will
 *  be ignored by the compiler if CRYPTO_EXAMPLE is not set in
@@ -133,6 +134,21 @@ void init() {
             print_error("ERROR: TRNG CAN'T INIT");
         }
     }
+
+    if(timer_init()) {
+        while(1){
+            print_error("ERROR: COUNTER CAN'T INIT");
+       }
+    }
+
+    /* //FIXME: Uncomment this later for release
+    if(counter_init()) {
+        while(1){
+            print_error("ERROR: COUNTER CAN'T INIT");
+        }
+    }
+    */
+
 }
 
 /**********************************************************
