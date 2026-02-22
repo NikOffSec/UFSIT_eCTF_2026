@@ -14,11 +14,19 @@
 #include "host_messaging.h"
 #include "secrets.h"
 #include "simple_timer.h"
+#include <math.h>
 
 bool check_pin(unsigned char *pin) {
-    
-    // -1 is because sizeof(HSM_PIN) returns 7 however we don't care about null term
-    if(memcmp(pin, HSM_PIN, sizeof(HSM_PIN) - 1)) {
+
+    //TODO: COMPARE WITH HASH OF PIN INSTEAD OF PIN (or some other crypto solution?)
+    //DON'T KEEP RAW PIN IN MEMORY!!!!!!!!!!!
+
+    // constant-time compare
+    uint8_t diff = 0;
+    for (size_t i = 0; i < sizeof(HSM_PIN) - 1; i++)
+        diff |= pin[i] ^ HSM_PIN[i];
+
+    if (diff != 0) {
         timer_wait_5s();
         return false;
     }

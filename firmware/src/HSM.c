@@ -167,6 +167,10 @@ int main(void) {
 
     // process commands forever
     while (1) {
+
+        //Clear the input buffer so that sensitive data from a past session can't be yoinked!
+        memset(uart_buf, 0, sizeof(uart_buf));
+
         print_debug("Ready\n");
 
         STATUS_LED_ON();
