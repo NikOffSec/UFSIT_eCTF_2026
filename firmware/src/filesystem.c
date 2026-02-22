@@ -57,15 +57,31 @@ int create_file(
     group_id_t group_id,
     char *name,
     uint16_t contents_len,
-    uint8_t *contents
+    uint8_t *contents,
+    uint16_t uart_pkt_len
 ) {
+
+    
+    // TODO: do calculations against uart_pkt_len compared to file size
+    // Check provided file size
+    //if(contents_len > STORED_FILE_SIZE) {
+    //    return -1;
+    //}
+
+    // TODO - cole - double check
+    name[MAX_NAME_SIZE - 1] = '\0';
+
+    // If the name is null then don't save
+    if(name[0] == '\0') {
+        return -1;
+    }
+
     memset(dest, 0, sizeof(file_t));
 
     dest->in_use = FILE_IN_USE;
     dest->group_id = group_id;
     dest->contents_len = contents_len;
 
-    // name must be null terminated, and the contents are defined by a length
     strcpy(dest->name, name);
     memcpy(dest->contents, contents, contents_len);
 
@@ -110,9 +126,13 @@ int write_file(slot_t slot, file_t *src, uint8_t *uuid) {
 int read_file(slot_t slot, file_t *dest) {
     int flash_addr, file_size;
 
+	if (slot < 0 || slot >= MAX_FILE_COUNT){
+		return -1;
+	}
     flash_addr = FILE_ALLOCATION_TABLE[slot].flash_addr;
     file_size = FILE_ALLOCATION_TABLE[slot].length;
-    if (flash_addr < 0 || file_size < 0) {
+
+    if (flash_addr < 0 || file_size < 0 || file_size >= 8192) {
         return -1;
     }
     flash_simple_read(flash_addr, dest, file_size);
