@@ -26,7 +26,8 @@ OBJECTS = $(BUILDDIR)/HSM.so \
     $(BUILDDIR)/security.so \
     $(BUILDDIR)/filesystem.so \
     $(BUILDDIR)/commands.so \
-    $(BUILDDIR)/gmac.so
+    $(BUILDDIR)/gmac.so \
+    $(BUILDDIR)/simple_trng.so
 
 # -----------------------------------------------------------------------------
 # Optional original crypto example (kept intact)
