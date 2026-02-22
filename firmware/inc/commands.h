@@ -111,6 +111,21 @@ typedef struct {
     pin_t pin;
 } interrogate_command_t;
 
+// Sent by the board that has the file list to the board that wants the file list
+typedef struct {
+    uint8_t new_key[KEY_SIZE];
+    uint8_t hash[HASH_SIZE];
+} interrogate_request_setup_t;
+
+// This will be encrypted with new_key and sent by the board that wants the file list to the board that has the file list
+typedef struct {
+    group_permission_t permissions[MAX_PERMS];
+    uint8_t hash[HASH_SIZE];
+} interrogate_request_t;
+
+
+
+
 /**********************************************************
  ******************** RESPONSE STRUCTS ********************
  **********************************************************/
@@ -118,6 +133,7 @@ typedef struct {
 typedef struct {
     uint32_t n_files;
     file_metadata_t metadata[MAX_FILE_COUNT];
+    uint8_t hash[HASH_SIZE];
 } list_response_t;
 
 typedef struct {

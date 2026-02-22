@@ -49,6 +49,52 @@ void generate_list_files(list_response_t *file_list) {
     }
 }
 
+bool can_recieve_file(group_id_t group_id, group_permission_t *perms) {
+    int i;
+
+    for(int i = 0; i < MAX_PERMS; i++) {
+        if(perms[i].group_id == group_id) {
+            // we found the group being refrenced
+            break;
+        }
+    }
+
+    // If this check passes then we know that group_id is not in the perm list they sent us
+    if(i == MAX_PERMS) {
+        return false;
+    }
+
+    if(perms[i].receive == true) {
+        return true;
+    }
+
+    return false;
+}
+
+void generate_list_files_perm_check(list_response_t *file_list, group_permission_t *perms) {
+    file_list->n_files = 0;
+    file_t temp_file;
+
+    // Loop through all files on the system
+    for (uint8_t i = 0; i < MAX_FILE_COUNT; i++) {
+        // Check if the file is in use
+        if (is_slot_in_use(i)) {
+            read_file(i, &temp_file);
+
+            if(!can_recieve_file(temp_file.group_id, perms)) {
+                print_debug("Can't receive file, does not have write group perms");
+                continue;
+            }
+
+            file_list->metadata[file_list->n_files].slot = i;
+            file_list->metadata[file_list->n_files].group_id = temp_file.group_id;
+            strncpy(file_list->metadata[file_list->n_files].name, (char *)&temp_file.name, MAX_NAME_SIZE - 1);
+            //strcpy(file_list->metadata[file_list->n_files].name, (char *)&temp_file.name);
+            file_list->n_files++;
+        }
+    }
+}
+
 
 /**********************************************************
  ******************** COMMAND HANDLERS ********************
@@ -225,11 +271,6 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
         return -1;
     }
 
-    char testing_buf[100] = {0};
-                
-    snprintf(testing_buf, sizeof(testing_buf)-1, "command_setup.random_number == %d", command_setup.random_number);
-    print_debug(testing_buf);
-
     // This int is used to avoid replay attacks
     setup_random_number = command_setup.random_number;
 
@@ -258,6 +299,11 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     len_recv_msg = sizeof(tmp_command_buffer);
     read_packet(TRANSFER_INTERFACE, &cmd, tmp_command_buffer, &len_recv_msg);
 
+    if (cmd != RECEIVE_MSG) {
+        print_error("Opcode mismatch");
+        return -1;
+    }
+
     // Decrypt file
     decrypt_sym(tmp_command_buffer, sizeof(receive_response_t), AES_KEY, (uint8_t *)&recv_resp);
 
@@ -272,11 +318,6 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
 
     if(memcmp(recv_resp.hash, hash_stack, HASH_SIZE) != 0) {
         print_error("RECIEVE: File Hash check failed!");
-        return -1;
-    }
-
-    if (cmd != RECEIVE_MSG) {
-        print_error("Opcode mismatch");
         return -1;
     }
 
@@ -303,6 +344,9 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
     msg_type_t cmd;
     list_response_t final_list_buf;
     uint16_t len_recv_msg;
+    interrogate_request_setup_t interrogate_setup;
+    interrogate_request_t interrogate_request;
+
 
     // I don't think this needs to be modified at all - Cole
     // TODO - check to see if the interegate command should be sending over a pin
@@ -315,14 +359,25 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
     }
 
     // request the file list from the neighboring device
-    write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, NULL, 0);
+    write_packet(TRANSFER_INTERFACE, INTERROGATE_SETUP_MSG, NULL, 0);
+
+    // Expect a INTERROGATE_SETUP_MSG message back for setup stuff
+    len_recv_msg = sizeof(interrogate_request_setup_t);
+    read_packet(TRANSFER_INTERFACE, &cmd, (void*)&interrogate_setup, &len_recv_msg);
+
+    // Send permissions
+    memset(&interrogate_request, 0, sizeof(interrogate_request_t));
+    memcpy(&interrogate_request.permissions, &global_permissions, sizeof(group_permission_t) * MAX_PERMS);
+    write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, &interrogate_request, sizeof(interrogate_request_t));
+    
+
 
     // UFSIT - cole - check to make sure that this is right
     len_recv_msg = sizeof(list_response_t);
 
     // recieve the response message
     read_packet(TRANSFER_INTERFACE, &cmd, &final_list_buf, &len_recv_msg);
-    if (cmd != INTERROGATE_MSG) {
+    if (cmd != INTERROGATE_FILE_LIST_MSG) {
         print_error("Opcode mismatch");
         return -1;
     }
@@ -350,6 +405,9 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
     int error = 0;
     uint32_t internal_random_number = 0;
 
+    interrogate_request_setup_t interrogate_setup;
+    interrogate_request_t interrogate_request;
+
     read_length = sizeof(uart_buf);
 
     // Receive a packet from a neighboring hsm
@@ -357,8 +415,21 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
     read_packet(TRANSFER_INTERFACE, &cmd, uart_buf, &read_length);
 
     switch (cmd) {
-        case INTERROGATE_MSG:
+        case INTERROGATE_SETUP_MSG:
 
+            // Send back a setup message to the HSM requesting file list
+            memset(&interrogate_setup, 0, sizeof(interrogate_request_setup_t));
+            write_packet(TRANSFER_INTERFACE, RECEIVE_SETUP_MSG, (void *)&tmp_command_buffer, sizeof(interrogate_request_setup_t));
+
+            // At this point the other HSM should send back it's list of permissions
+            read_length = sizeof(interrogate_request);
+            read_packet(TRANSFER_INTERFACE, &cmd, &interrogate_request, &read_length);
+
+            if (cmd != INTERROGATE_FILE_LIST_MSG) {
+                print_error("INTERROGATE: Opcode mismatch");
+                return -1;
+            }
+            
             /*
             https://rules.ectf.mitre.org/2026/specs/host_interface.html#interrogate-files
             This is a pin protected function. The HSM should reach out via UART1 to a neighbor HSM to receive a list of files on that device. The interrogate files functionality must return a list of all files that the neighbor HSM contains for which the local HSM has receive permissions. The body of the response will contain a list of files and their associated metadata. Communication between the two devices may be design-specific.
@@ -370,11 +441,11 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             memset(&file_list, 0, sizeof(file_list));
 
             // generate a list of files for the other device
-            generate_list_files(&file_list);
+            generate_list_files_perm_check(&file_list, &interrogate_request);
 
             // send the list of files on this device
             write_length = LIST_PKT_LEN(file_list.n_files);
-            write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, &file_list, write_length);
+            write_packet(TRANSFER_INTERFACE, INTERROGATE_FILE_LIST_MSG, &file_list, write_length);
             break;
         case RECEIVE_SETUP_MSG: // was RECEIVE_MSG
             // get the request

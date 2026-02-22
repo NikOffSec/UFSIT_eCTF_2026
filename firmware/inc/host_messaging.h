@@ -31,6 +31,8 @@ typedef enum {
     RECEIVE_MSG = 'C',      // 'C' - 0x43
     RECEIVE_SETUP_MSG = 'X',// 'X'
     INTERROGATE_MSG = 'I',  // 'I' - 0x49
+    INTERROGATE_SETUP_MSG = 'M',  // 'M'
+    INTERROGATE_FILE_LIST_MSG = 'Z', // 'Z'
     LISTEN_MSG = 'N',       // 'N' - 0x4e
     ACK_MSG = 'A',          // 'A' - 0x41
     DEBUG_MSG = 'D',        // 'D' - 0x44
