@@ -14,6 +14,7 @@
 #include "host_messaging.h"
 #include "secrets.h"
 #include "simple_timer.h"
+#include <math.h>
 
 bool check_pin(unsigned char *pin) {
 
@@ -21,7 +22,7 @@ bool check_pin(unsigned char *pin) {
     print_debug(pin);
 
     //Ensure that length is the same (would otherwise have issues with longer pin than HSM_PIN)
-    if(strlen(pin) > strlen(HSM_PIN)){
+    if(fmin(strlen(pin)-1, 6) > strlen(HSM_PIN)-1){
         timer_wait_5s();
         return false;
     }
