@@ -119,7 +119,7 @@ bool is_slot_in_use(slot_t slot);
  *
  * @return 0 upon success. A negative value otherwise.
 */
-int create_file(file_t *dest, group_id_t group_id, char *name, uint16_t contents_len, uint8_t *contents);
+int create_file(file_t *dest, group_id_t group_id, char *name, uint16_t contents_len, uint8_t *contents, uint16_t uart_pkt_len);
 
 /** @brief Create a new file object in memory
  *

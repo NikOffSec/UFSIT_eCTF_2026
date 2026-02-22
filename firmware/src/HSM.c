@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <strings.h>
 
 #include "simple_flash.h"
 #include "host_messaging.h"
@@ -24,6 +25,8 @@
 #include "ti_msp_dl_config.h"
 #include "status_led.h"
 #include "simple_uart.h"
+
+#include "simple_trng.h"
 
 /* Code between this #ifdef and the subsequent #endif will
 *  be ignored by the compiler if CRYPTO_EXAMPLE is not set in
@@ -124,6 +127,12 @@ void init() {
     SYSCFG_DL_init();
 
     init_fs();
+
+    if(trng_init()) {
+        while(1){
+            print_error("ERROR: TRNG CAN'T INIT");
+        }
+    }
 }
 
 /**********************************************************
@@ -138,6 +147,7 @@ int main(void) {
 
     // initialize the device
     init();
+    //trng_init();
 
     // process commands forever
     while (1) {
@@ -173,16 +183,6 @@ int main(void) {
 
         // Handle list command
         case LIST_MSG:
-
-#ifdef CRYPTO_EXAMPLE
-            // Run the crypto example
-            // TODO: Remove this from your design
-            crypto_example();
-#endif // CRYPTO_EXAMPLE
-
-            // Print the boot flag
-            // TODO: Remove this from your design
-            boot_flag();
 
             STATUS_LED_OFF();
             list(pkt_len, uart_buf);
