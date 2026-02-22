@@ -6,6 +6,7 @@ Modified for eCTF Key Generation
 
 import argparse
 import json
+import secrets as pysecrets
 import os
 from pathlib import Path
 
@@ -37,29 +38,45 @@ def generate_key_pair():
 
 
 def gen_secrets(groups: list[int]) -> bytes:
-    """Generate the contents secrets file"""
+    """Generate deployment secrets JSON consumed by firmware build tooling.
 
+    Includes:
+      - deployment groups
+      - GMAC/master keys (for message authentication / future KDF use)
+      - AES key bytes (legacy/teammate compatibility)
+      - per-group Ed25519 keypairs (for asymmetric identity/session work)
+    """
+    # Normalize groups for determinism and sanity
+    norm_groups = sorted(set(int(g) & 0xFFFF for g in groups))
+
+    # Symmetric crypto material
+    k_master = pysecrets.token_bytes(16)   # AES-128 sized master
+    k_gmac = pysecrets.token_bytes(16)     # AES-GMAC key
+    aes_bytes = os.urandom(16)             # teammate compatibility key
+
+    # Per-group asymmetric identity keys
     group_crypto_data = {}
-
-    for group_id in groups:
+    for group_id in norm_groups:
         priv_hex, pub_hex = generate_key_pair()
-
-
         group_crypto_data[str(group_id)] = {
             "private_key": priv_hex,
-            "public_key": pub_hex
+            "public_key": pub_hex,
         }
 
-    aes_bytes = os.urandom(16)
-    aes_bytes = aes_bytes.hex()
-
-    secrets = {
-        "groups": groups,
+    secrets_obj = {
+        "version": 2,
+        "format": "ectf26-secrets-json",
+        "groups": norm_groups,
+        "crypto": {
+            "aes_key_bytes": 16,
+            "gmac_key_hex": k_gmac.hex(),
+            "master_key_hex": k_master.hex(),
+            "aes_bytes_hex": aes_bytes.hex(),
+        },
         "group_keys": group_crypto_data,
-        "aes_bytes": aes_bytes,
     }
 
-    return json.dumps(secrets, indent=4).encode()
+    return json.dumps(secrets_obj, separators=(",", ":"), sort_keys=True).encode("utf-8")
 
 
 def parse_args():
@@ -86,13 +103,16 @@ def parse_args():
 
 
 def main():
-    """Main function of gen_secrets"""
+    """Main function of gen_secrets."""
     args = parse_args()
 
-    secrets = gen_secrets(args.groups)
+    secrets_blob = gen_secrets(args.groups)
+
+    # Optional debug: be careful not to leak in shared logs
+    logger.debug(f"Generated secrets: {secrets_blob}")
 
     with open(args.secrets_file, "wb" if args.force else "xb") as f:
-        f.write(secrets)
+        f.write(secrets_blob)
 
     logger.success(f"Wrote secrets to {str(args.secrets_file.absolute())}")
 

@@ -11,18 +11,81 @@
  * @copyright Copyright (c) 2026 The MITRE Corporation
  */
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
 #include "host_messaging.h"
 #include "commands.h"
 #include "filesystem.h"
+#include "gmac.h"
+#include "secrets.h"
 #include "simple_trng.h"
+#include "simple_timer.h"   // for nonce_accept(...) if your replay cache lives here
 
 /* IMPORTANT COMPONENTS FROM HSM.c */
-// extern file_t hsm_status[MAX_FILE_COUNT];
-static file_t current_file;
+static file_t current_file; /* retained to minimize diffs; currently unused */
+
+/* If commands.h still defines tmp_command_buffer directly, do NOT define it here.
+ * Prefer changing commands.h to:
+ *   extern uint8_t tmp_command_buffer[MAX_COMMAND_SIZE];
+ * and keep this definition here.
+ */
+#ifndef TMP_COMMAND_BUFFER_DEFINED_IN_HEADER
+uint8_t tmp_command_buffer[MAX_COMMAND_SIZE];
+#endif
+
+// ===== GMAC test mode (TEMPORARY) =====
+// 1 = deterministic nonce, replay checks disabled (for integration testing only)
+#define GMAC_TEST_MODE_NO_NONCE 0
+
+#if GMAC_TEST_MODE_NO_NONCE
+#warning "GMAC test mode enabled: deterministic nonce + replay disabled. NOT FOR COMPETITION USE."
+#endif
+
+#ifndef HSM_ID
+#define HSM_ID 0x0001
+#endif
+
+// ---- Attack simulation flags (TEST ONLY) ----
+// Choose ONE at a time.
+// #define ATTACK_FLIP_TAG_BIT
+// #define ATTACK_SPOOF_SENDER_ID
+// #define ATTACK_TAMPER_SLOT
+// #define ATTACK_REPLAY_DUPLICATE_SEND
 
 /**********************************************************
  ******************** HELPER FUNCTIONS ********************
  **********************************************************/
+
+static int get_request_nonce(uint8_t nonce[GMAC_NONCE_LEN]) {
+#if GMAC_TEST_MODE_NO_NONCE
+    // Deterministic evolving nonce for testing GMAC plumbing without TRNG
+    static uint32_t test_ctr = 1;
+    memset(nonce, 0, GMAC_NONCE_LEN);
+    nonce[8]  = (uint8_t)(test_ctr >> 24);
+    nonce[9]  = (uint8_t)(test_ctr >> 16);
+    nonce[10] = (uint8_t)(test_ctr >> 8);
+    nonce[11] = (uint8_t)(test_ctr);
+    test_ctr++;
+    return 0;
+#else
+    return trng_get_bytes(nonce, GMAC_NONCE_LEN);
+#endif
+}
+
+// Replay checker wrapper for test mode
+static bool nonce_accept_test(uint16_t sender_id, const uint8_t *nonce, size_t nonce_len) {
+    (void)sender_id;
+    (void)nonce;
+    (void)nonce_len;
+#if GMAC_TEST_MODE_NO_NONCE
+    return true;   // TEMP: disable replay checks in test mode
+#else
+    return nonce_accept(sender_id, nonce, nonce_len);
+#endif
+}
 
 /** @brief List out the files on the system.
  *      To be utilized by list and interrogate
@@ -34,34 +97,108 @@ void generate_list_files(list_response_t *file_list) {
     file_list->n_files = 0;
     file_t temp_file;
 
-    // Loop through all files on the system
     for (uint8_t i = 0; i < MAX_FILE_COUNT; i++) {
-        // Check if the file is in use
         if (is_slot_in_use(i)) {
             read_file(i, &temp_file);
 
             file_list->metadata[file_list->n_files].slot = i;
             file_list->metadata[file_list->n_files].group_id = temp_file.group_id;
-            strncpy(file_list->metadata[file_list->n_files].name, (char *)&temp_file.name, MAX_NAME_SIZE - 1);
-            //strcpy(file_list->metadata[file_list->n_files].name, (char *)&temp_file.name);
+            strncpy(file_list->metadata[file_list->n_files].name,
+                    (char *)&temp_file.name,
+                    MAX_NAME_SIZE - 1);
+            file_list->metadata[file_list->n_files].name[MAX_NAME_SIZE - 1] = '\0';
+
             file_list->n_files++;
         }
     }
 }
 
+static uint8_t perm_flags(const group_permission_t *p) {
+    return (uint8_t)((p->read ? 1u : 0u) |
+                     (p->write ? 2u : 0u) |
+                     (p->receive ? 4u : 0u));
+}
+
+static size_t pack_permissions_sorted(const group_permission_t *in, size_t n,
+                                      uint8_t *out, size_t out_cap) {
+    group_permission_t tmp[MAX_PERMS];
+    size_t m = 0;
+
+    for (size_t i = 0; i < n; i++) {
+        if (in[i].group_id == 0) continue; // sentinel for unused
+        tmp[m++] = in[i];
+    }
+
+    // insertion sort by group_id (MAX_PERMS is tiny)
+    for (size_t i = 1; i < m; i++) {
+        group_permission_t key = tmp[i];
+        size_t j = i;
+        while (j > 0 && tmp[j - 1].group_id > key.group_id) {
+            tmp[j] = tmp[j - 1];
+            j--;
+        }
+        tmp[j] = key;
+    }
+
+    size_t need = m * 3u; // gid_hi, gid_lo, flags
+    if (out_cap < need) return 0;
+
+    for (size_t i = 0; i < m; i++) {
+        uint16_t gid = tmp[i].group_id;
+        out[i * 3 + 0] = (uint8_t)(gid >> 8);
+        out[i * 3 + 1] = (uint8_t)(gid & 0xFF);
+        out[i * 3 + 2] = perm_flags(&tmp[i]);
+    }
+
+    return need;
+}
+
+static size_t build_receive_request_aad(const receive_request_t *req,
+                                        uint8_t *out, size_t out_cap) {
+    // AAD fields:
+    // sender_id (2) | slot (2) | perm_blob_len (1) | perm_blob (...)
+    // Nonce is not included here because it is passed as the GCM nonce/IV.
+    size_t need = 2u + 2u + 1u + (size_t)req->perm_blob_len;
+    if (out_cap < need) return 0;
+
+    size_t off = 0;
+
+    out[off++] = (uint8_t)(req->sender_id >> 8);
+    out[off++] = (uint8_t)(req->sender_id & 0xFF);
+
+    out[off++] = (uint8_t)(((uint16_t)req->slot) >> 8);
+    out[off++] = (uint8_t)(((uint16_t)req->slot) & 0xFF);
+
+    out[off++] = req->perm_blob_len;
+
+    memcpy(&out[off], req->perm_blob, req->perm_blob_len);
+    off += req->perm_blob_len;
+
+    return off;
+}
+
+static bool requester_has_receive_perm_for_group(const receive_request_t *req, uint16_t group_id) {
+    if (req->perm_blob_len > PERM_BLOB_MAX) return false;
+    if ((req->perm_blob_len % 3u) != 0u) return false;
+
+    for (size_t i = 0; i < req->perm_blob_len; i += 3u) {
+        uint16_t gid = ((uint16_t)req->perm_blob[i] << 8) | (uint16_t)req->perm_blob[i + 1];
+        uint8_t flags = req->perm_blob[i + 2];
+
+        if (gid == group_id) {
+            return ((flags & 0x04u) != 0u); // receive bit
+        }
+    }
+    return false;
+}
 
 /**********************************************************
  ******************** COMMAND HANDLERS ********************
  **********************************************************/
 
-/** @brief Perform the list operation
- *
- *  @param pkt_len The length of the incoming packet
- *  @param buf A pointer the incoming message buffer
- *
- * @return 0 upon success. A negative value on error.
-*/
+/** @brief Perform the list operation */
 int list(uint16_t pkt_len, uint8_t *buf) {
+    (void)pkt_len;
     list_command_t *command = (list_command_t*)buf;
     list_response_t file_list;
 
@@ -71,25 +208,16 @@ int list(uint16_t pkt_len, uint8_t *buf) {
     }
 
     memset(&file_list, 0, sizeof(file_list));
-
-    // copy relevant fields into the final struct
     generate_list_files(&file_list);
 
-    // write success packet with list
     pkt_len_t length = LIST_PKT_LEN(file_list.n_files);
     write_packet(CONTROL_INTERFACE, LIST_MSG, &file_list, length);
     return 0;
 }
 
-
-/** @brief Perform the read operation
- *
- *  @param pkt_len The length of the incoming packet
- *  @param buf A pointer the incoming message buffer
- *
- * @return 0 upon success. A negative value on error.
-*/
+/** @brief Perform the read operation */
 int read(uint16_t pkt_len, uint8_t *buf) {
+    (void)pkt_len;
     read_command_t *command = (read_command_t*)buf;
     read_response_t file_info;
     file_t curr_file;
@@ -99,22 +227,20 @@ int read(uint16_t pkt_len, uint8_t *buf) {
         return -1;
     }
 
-    // zeroizing memory is a pretty good practice
-
     memset(&file_info, 0, sizeof(read_response_t));
 
     if (read_file(command->slot, &curr_file) < 0) {
         print_error("Failed to read file");
         return -1;
     }
-    
-    // TODO - UFSIT - COLE - check
-    if(strlen(curr_file.name) > MAX_NAME_SIZE) {
+
+    size_t name_len = strnlen((char*)curr_file.name, MAX_NAME_SIZE);
+    if (name_len >= MAX_NAME_SIZE) {
+        print_error("Invalid file name");
         return -1;
     }
 
-    // copy structure of the persistent file
-    memcpy(file_info.name, &curr_file.name, strlen(curr_file.name));
+    memcpy(file_info.name, &curr_file.name, name_len);
     memcpy(file_info.contents, &curr_file.contents, curr_file.contents_len);
 
     if (!validate_permission(curr_file.group_id, PERM_READ)) {
@@ -122,23 +248,14 @@ int read(uint16_t pkt_len, uint8_t *buf) {
         return -1;
     }
 
-    // write a success message with the file information
-    pkt_len_t length = MAX_NAME_SIZE + curr_file.contents_len;
+    pkt_len_t length = (pkt_len_t)(MAX_NAME_SIZE + curr_file.contents_len);
     write_packet(CONTROL_INTERFACE, READ_MSG, &file_info, length);
     return 0;
 }
 
-
-/** @brief Perform the write operation
- *
- *  @param pkt_len The length of the incoming packet
- *  @param buf A pointer the incoming message buffer
- *
- * @return 0 upon success. A negative value on error.
-*/
+/** @brief Perform the write operation */
 int write(uint16_t pkt_len, uint8_t *buf) {
     write_command_t *command = (write_command_t*)buf;
-    int ret;
     file_t curr_file;
 
     if (!check_pin(command->pin)) {
@@ -151,127 +268,101 @@ int write(uint16_t pkt_len, uint8_t *buf) {
         return -1;
     }
 
-    // UFSIT
-    // Added parsing checks to create_file, it can fail if parsing from UART violates struct feilds
-    if(create_file(
-        &curr_file,
-        command->group_id,
-        command->name,
-        command->contents_len,
-        command->contents,
-        pkt_len) != 0) {
+    // Added parsing checks to create_file; it can fail if UART parsing violates struct fields
+    if (create_file(
+            &curr_file,
+            command->group_id,
+            command->name,
+            command->contents_len,
+            command->contents,
+            pkt_len) != 0) {
         print_error("Error creating file");
         return -1;
     }
 
-    // Store the file persistently
     if (write_file(command->slot, &curr_file, command->uuid) < 0) {
         print_error("Error writing file");
         return -1;
     }
 
-    // Success message with an empty body
     write_packet(CONTROL_INTERFACE, WRITE_MSG, NULL, 0);
     return 0;
 }
 
-
-/** @brief Perform the receive operation
- *
- *  @param pkt_len The length of the incoming packet
- *  @param buf A pointer the incoming message buffer
- *
- * @return 0 upon success. A negative value on error.
-*/
+/** @brief Perform the receive operation */
 int receive(uint16_t pkt_len, uint8_t *buf) {
+    (void)pkt_len;
     receive_command_t *command = (receive_command_t *)buf;
-    receive_request_setup_t command_setup;
     receive_request_t request;
     receive_response_t recv_resp;
     msg_type_t cmd;
     uint16_t len_recv_msg;
-    uint32_t setup_random_number = 0;
-    uint32_t internal_random_number = trng_generate();
-    int ret;
-    uint16_t read_length;
-    uint8_t hash_stack[HASH_SIZE];
 
     if (!check_pin(command->pin)) {
         print_error("Invalid pin");
         return -1;
     }
 
-    // First, tell the HSM you are communicating with that you want to start a recieve file transfer
-    memset(&tmp_command_buffer, 0, sizeof(receive_request_setup_t));
-    //write_packet(TRANSFER_INTERFACE, RECEIVE_SETUP_MSG, (void *)&tmp_command_buffer, sizeof(receive_request_setup_t));
-    write_packet(TRANSFER_INTERFACE, RECEIVE_SETUP_MSG, NULL, 0);
-
-    read_length = sizeof(receive_request_setup_t);
-    read_packet(TRANSFER_INTERFACE, &cmd, tmp_command_buffer, &read_length);
-
-    if(cmd != RECEIVE_SETUP_MSG) {
-        print_error("receive: did not get RECEIVE_SETUP_MSG got something else");
-        return -1;
-    }
-
-    // decrypt the uart_buf
-    decrypt_sym(tmp_command_buffer, sizeof(receive_request_setup_t), AES_KEY, (uint8_t*)&command_setup);
-
-    // MD5 check the number
-    hash((uint8_t*)&command_setup, 4, (uint8_t*)&hash_stack);
-
-    if(memcmp(command_setup.hash, hash_stack, HASH_SIZE) != 0) {
-        print_error("RECV: Hash check failed!");
-        return -1;
-    }
-
-    char testing_buf[100] = {0};
-                
-    snprintf(testing_buf, sizeof(testing_buf)-1, "command_setup.random_number == %d", command_setup.random_number);
-    print_debug(testing_buf);
-
-    // This int is used to avoid replay attacks
-    setup_random_number = command_setup.random_number;
-
-    // zeroize the buffers we will use
-    memset(&recv_resp, 0, sizeof(recv_resp));
     memset(&request, 0, sizeof(request));
+    memset(&recv_resp, 0, sizeof(recv_resp));
 
-    // prep request to neighbor
-    request.setup_random_number = setup_random_number;
-    request.internal_random_number = internal_random_number;
+    // Build request to neighbor
+    request.sender_id = HSM_ID;
     request.slot = command->read_slot;
-    memcpy(&request.permissions, &global_permissions, sizeof(group_permission_t) * MAX_PERMS);
 
-    // Calculate the md5 hash of receive_request_t, subtract out the size of the hash
-    hash((uint8_t*)&request, sizeof(receive_request_t) - HASH_SIZE, (uint8_t*)&request.hash);
+    size_t perm_blob_len = pack_permissions_sorted(
+        global_permissions, MAX_PERMS, request.perm_blob, sizeof(request.perm_blob));
+    if (perm_blob_len == 0 && MAX_PERMS > 0) {
+        print_error("Packing permissions failed");
+        return -1;
+    }
+    request.perm_blob_len = (uint8_t)perm_blob_len;
 
-    // Encrypt the receive_request_t command
-    encrypt_sym((void*)&request, sizeof(receive_request_t), AES_KEY, tmp_command_buffer);
-    
-    print_hex_debug(tmp_command_buffer, 16);
-    // request the file from the neighboring device
-    write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&tmp_command_buffer, sizeof(receive_request_t));
-
-    
-    // recieve the response message containing the file
-    len_recv_msg = sizeof(tmp_command_buffer);
-    read_packet(TRANSFER_INTERFACE, &cmd, tmp_command_buffer, &len_recv_msg);
-
-    // Decrypt file
-    decrypt_sym(tmp_command_buffer, sizeof(receive_response_t), AES_KEY, (uint8_t *)&recv_resp);
-
-    // Check the int
-    if(recv_resp.internal_random_number != internal_random_number) {
-        print_error("RECIEVE: The int given to the HSM does not match when I got back the file!");
+    if (get_request_nonce(request.nonce) != 0) {
+        print_error("Nonce generation failed");
         return -1;
     }
 
-    // Check the hash
-    hash((uint8_t*)&recv_resp, sizeof(receive_response_t) - HASH_SIZE, (uint8_t*)&hash_stack);
+    // Build AAD and compute GMAC
+    uint8_t aad[2 + 2 + 1 + PERM_BLOB_MAX];
+    size_t aad_len = build_receive_request_aad(&request, aad, sizeof(aad));
+    if (aad_len == 0) {
+        print_error("AAD build failed");
+        return -1;
+    }
 
-    if(memcmp(recv_resp.hash, hash_stack, HASH_SIZE) != 0) {
-        print_error("RECIEVE: File Hash check failed!");
+    if (gmac_compute_tag(GMAC_KEY, request.nonce, aad, aad_len, request.tag) != 0) {
+        print_error("GMAC tag generation failed");
+        return -1;
+    }
+
+#ifdef ATTACK_FLIP_TAG_BIT
+    request.tag[0] ^= 0x01;
+    print_debug("[ATTACK] Flipped 1 bit in GMAC tag");
+#endif
+
+#ifdef ATTACK_SPOOF_SENDER_ID
+    request.sender_id ^= 0x0001;
+    print_debug("[ATTACK] Spoofed sender_id after GMAC generation");
+#endif
+
+#ifdef ATTACK_TAMPER_SLOT
+    request.slot ^= 0x01;
+    print_debug("[ATTACK] Tampered slot after GMAC generation");
+#endif
+
+    // Send authenticated request
+    write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&request, sizeof(receive_request_t));
+
+#ifdef ATTACK_REPLAY_DUPLICATE_SEND
+    print_debug("[ATTACK] Re-sending exact same RECEIVE packet for replay test");
+    write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&request, sizeof(receive_request_t));
+#endif
+
+    // Receive file response (legacy response struct retained for compatibility)
+    len_recv_msg = sizeof(recv_resp);
+    if (read_packet(TRANSFER_INTERFACE, &cmd, &recv_resp, &len_recv_msg) != MSG_OK) {
+        print_error("Failed to receive response");
         return -1;
     }
 
@@ -280,215 +371,170 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
         return -1;
     }
 
-    // write that file into the file system
+    if (len_recv_msg < sizeof(recv_resp.uuid) + sizeof(recv_resp.internal_random_number)) {
+        print_error("Receive response too short");
+        return -1;
+    }
+
     if (write_file(command->write_slot, &recv_resp.file, recv_resp.uuid) < 0) {
         print_error("Writing received file failed");
         return -1;
     }
-    // empty success message
+
     write_packet(CONTROL_INTERFACE, RECEIVE_MSG, NULL, 0);
     return 0;
 }
 
-
-/** @brief Perform the interrogate operation
- *
- *  @param pkt_len The length of the incoming packet
- *  @param buf A pointer to the incoming message buffer
- *
- * @return 0 upon success. A negative value on error.
- */
+/** @brief Perform the interrogate operation */
 int interrogate(uint16_t pkt_len, uint8_t *buf) {
+    (void)pkt_len;
     interrogate_command_t *command = (interrogate_command_t*)buf;
     msg_type_t cmd;
     list_response_t final_list_buf;
     uint16_t len_recv_msg;
 
-    // I don't think this needs to be modified at all - Cole
-    // TODO - check to see if the interegate command should be sending over a pin
-    // I don't think it needs to
-
-    // pin check
     if (!check_pin(command->pin)) {
         print_error("Invalid pin");
         return -1;
     }
 
-    // request the file list from the neighboring device
     write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, NULL, 0);
 
-    // UFSIT - cole - check to make sure that this is right
-    len_recv_msg = sizeof(list_response_t);
+    len_recv_msg = sizeof(final_list_buf);
+    if (read_packet(TRANSFER_INTERFACE, &cmd, &final_list_buf, &len_recv_msg) != MSG_OK) {
+        print_error("Failed to receive interrogate response");
+        return -1;
+    }
 
-    // recieve the response message
-    read_packet(TRANSFER_INTERFACE, &cmd, &final_list_buf, &len_recv_msg);
     if (cmd != INTERROGATE_MSG) {
         print_error("Opcode mismatch");
         return -1;
     }
-    
-    // return the final list to the user
+
     write_packet(CONTROL_INTERFACE, INTERROGATE_MSG, &final_list_buf, len_recv_msg);
     return 0;
 }
 
-
-/** @brief Perform the listen operation
- *
- * @return 0 upon success. A negative value on error.
-*/
+/** @brief Perform the listen operation */
 int listen(uint16_t pkt_len, uint8_t *buf) {
-    uint8_t uart_buf[sizeof(receive_request_t)];
+    (void)pkt_len;
+    (void)buf;
+
+    uint8_t uart_buf[MAX_MSG_SIZE > sizeof(receive_request_t) ? MAX_MSG_SIZE : sizeof(receive_request_t)];
     msg_type_t cmd;
     pkt_len_t write_length, read_length;
     list_response_t file_list;
-    receive_request_t *command;
-    receive_request_setup_t request_setup;
     receive_response_t recv_resp;
     const filesystem_entry_t *metadata;
-    uint8_t hash_stack[HASH_SIZE];
-    int error = 0;
-    uint32_t internal_random_number = 0;
 
     read_length = sizeof(uart_buf);
 
-    // Receive a packet from a neighboring hsm
     memset(uart_buf, 0, sizeof(uart_buf));
-    read_packet(TRANSFER_INTERFACE, &cmd, uart_buf, &read_length);
+    if (read_packet(TRANSFER_INTERFACE, &cmd, uart_buf, &read_length) != MSG_OK) {
+        print_error("listen: failed to read transfer packet");
+        return -1;
+    }
 
     switch (cmd) {
-        case INTERROGATE_MSG:
-
-            /*
-            https://rules.ectf.mitre.org/2026/specs/host_interface.html#interrogate-files
-            This is a pin protected function. The HSM should reach out via UART1 to a neighbor HSM to receive a list of files on that device. The interrogate files functionality must return a list of all files that the neighbor HSM contains for which the local HSM has receive permissions. The body of the response will contain a list of files and their associated metadata. Communication between the two devices may be design-specific.
-            */
-
-            // TODO - INTERROGATE should send over the persmissions of the device making the request
-
-            // zeroize the buffers we will use
+        case INTERROGATE_MSG: {
             memset(&file_list, 0, sizeof(file_list));
-
-            // generate a list of files for the other device
             generate_list_files(&file_list);
 
-            // send the list of files on this device
             write_length = LIST_PKT_LEN(file_list.n_files);
             write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, &file_list, write_length);
             break;
-        case RECEIVE_SETUP_MSG: // was RECEIVE_MSG
-            // get the request
-            /*
-            https://rules.ectf.mitre.org/2026/specs/host_interface.html#receive-file
-            This is a pin protected function. The HSM should reach out via UART1 to a neighbor HSM to receive a file from that device. If the HSM has permissions to receive the group, the HSM should write the file to the device.
-            */
+        }
 
-            // zero buffer
-            memset(&request_setup, 0, sizeof(request_setup));
+        case RECEIVE_MSG: {
+            receive_request_t req;
+            uint8_t aad[2 + 2 + 1 + PERM_BLOB_MAX];
+            uint8_t expected_tag[GMAC_TAG_LEN];
+            size_t aad_len;
 
-            // generate session int so reply attacks don't work
-            request_setup.random_number = trng_generate();
+            memset(&req, 0, sizeof(req));
+            memset(&recv_resp, 0, sizeof(recv_resp));
 
-            // Calcuate the hash of the int and store it in the struct
-            hash((uint8_t*)&request_setup, 4, (uint8_t*)&request_setup.hash);
-
-            // Encrypt the request message
-            encrypt_sym((uint8_t*)&request_setup, sizeof(request_setup), AES_KEY, tmp_command_buffer);
-
-            write_packet(TRANSFER_INTERFACE, RECEIVE_SETUP_MSG, (void *)&tmp_command_buffer, sizeof(receive_request_setup_t));
-
-            // Get back the message from the user where they 
-            read_length = sizeof(uart_buf);
-            error = read_packet(TRANSFER_INTERFACE, &cmd, uart_buf, &read_length);
-
-            if(cmd != RECEIVE_MSG) {
-                print_error("receive: did not get RECEIVE_SETUP_MSG got something else");
+            // For now require a full fixed-size receive_request_t packet
+            if (read_length != sizeof(receive_request_t)) {
+                print_error("RECEIVE request bad length");
                 return -1;
             }
 
-            decrypt_sym(uart_buf, sizeof(receive_request_t), AES_KEY, tmp_command_buffer);
+            memcpy(&req, uart_buf, sizeof(req));
 
-            command = (receive_request_t*)&tmp_command_buffer;
-
-            print_hex_debug(tmp_command_buffer, 16);
-
-            char testing_buf[100] = {0};
-            snprintf(testing_buf, sizeof(testing_buf)-1, "error %d", error);
-            print_debug(testing_buf);
-
-            if (request_setup.random_number != command->setup_random_number) {
-                print_error("LISTEN: Setup random number different from the one I gave the other HSM!");
+            if (req.perm_blob_len > PERM_BLOB_MAX || (req.perm_blob_len % 3u) != 0u) {
+                print_error("Invalid permission blob length");
                 return -1;
             }
 
-            hash((uint8_t*)&tmp_command_buffer, sizeof(receive_request_t) - HASH_SIZE, (uint8_t*)&hash_stack);
-
-            if(memcmp(command->hash, hash_stack, HASH_SIZE) != 0) {
-                print_error("LISTEN: Hash check failed!");
-                return -1;
-            }
-            
-            // Sanity checking
-            if (command->slot > MAX_FILE_COUNT) {
-                print_error("LISTEN: recv a slot higher then number of possible slots");
+            aad_len = build_receive_request_aad(&req, aad, sizeof(aad));
+            if (aad_len == 0) {
+                print_error("AAD build failed");
                 return -1;
             }
 
-            if (read_file(command->slot, &recv_resp.file) < 0) {
+            if (gmac_compute_tag(GMAC_KEY, req.nonce, aad, aad_len, expected_tag) != 0) {
+                print_error("GMAC compute failed");
+                return -1;
+            }
+
+            if (!gmac_tag_eq_ct(expected_tag, req.tag)) {
+                print_error("GMAC verify failed");
+                return -1;
+            }
+
+            // Replay protection after successful tag verify (prevents cache poisoning)
+            if (!nonce_accept_test(req.sender_id, req.nonce, GMAC_NONCE_LEN)) {
+                print_error("Replay detected");
+                return -1;
+            }
+
+            if ((uint16_t)req.slot >= MAX_FILE_COUNT) {
+                print_error("Invalid slot");
+                return -1;
+            }
+
+            if (read_file(req.slot, &recv_resp.file) < 0) {
                 print_error("Failed to read file");
                 return -1;
             }
 
-            metadata = get_file_metadata(command->slot);
+            // Sender-side local policy: this board must be allowed to transfer this group
+            if (!validate_permission(recv_resp.file.group_id, PERM_RECEIVE)) {
+                print_error("Local policy denies transfer for file group");
+                return -1;
+            }
+
+            // Requester-side claimed perms (authenticated by GMAC)
+            if (!requester_has_receive_perm_for_group(&req, recv_resp.file.group_id)) {
+                print_error("Requester lacks RECEIVE permission for file group");
+                return -1;
+            }
+
+            metadata = get_file_metadata(req.slot);
             if (metadata == NULL) {
                 print_error("Getting metadata failed");
                 return -1;
             }
 
-            // Find which group ID the file belongs to
-            int i = 0;
-
-            // Check to see if the sending board has that group ID
-            for (; i <= MAX_PERMS ; i++) {
-                
-                // If we have looped through every loop element and it doesn't have it, then the board doesn't have the right group to read the file so exit
-                if (i == MAX_PERMS) {
-                    print_error("The board did not have the right group to access the file");
-                    return -1;
-                }
-
-                if(command->permissions[i].group_id == recv_resp.file.group_id) {
-                    break;
-                }
-            }
-
-            // Check to see if the sending board has the correct group ID permissions to recieve the file
-            if(command->permissions[i].receive != true) {
-                print_error("Permission Check Failed");
-                return -1;
-            }
-
             memcpy(&recv_resp.uuid, &metadata->uuid, UUID_SIZE);
 
-            // Add the challenge number that the neighbor HSM gave us
-            recv_resp.internal_random_number = command->internal_random_number;\
+            // Retained field for compatibility with existing struct
+            recv_resp.internal_random_number = 0;
 
-            // Calculate hash
-            hash((uint8_t*)&recv_resp, sizeof(receive_response_t) - HASH_SIZE, (uint8_t*)&recv_resp.hash);
-
-            // encrypt the packet
-            encrypt_sym((void*)&recv_resp, sizeof(receive_response_t), AES_KEY, tmp_command_buffer);
-
-            // send the file to the neighbor hsm
+            // NOTE: Response is not yet GMAC-protected here.
+            // This gets the GMAC request path working first.
             write_length = sizeof(receive_response_t);
-            write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, &tmp_command_buffer, write_length);
+            write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, &recv_resp, write_length);
             break;
+        }
+
         default:
-            print_error("Bad message type");
+            print_error("listen: unsupported transfer opcode");
             return -1;
     }
 
-    // blank success message
+    // Blank success message for host-side listen command semantics
     write_packet(CONTROL_INTERFACE, LISTEN_MSG, NULL, 0);
     return 0;
 }

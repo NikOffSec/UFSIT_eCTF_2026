@@ -19,6 +19,8 @@
 
 #include "wolfssl/wolfcrypt/aes.h"
 #include "wolfssl/wolfcrypt/hash.h"
+#include <ti/devices/msp/mspm0lxx/driverlib/dl_aesadv.h>
+
 
 /******************************** MACRO DEFINITIONS ********************************/
 #define BLOCK_SIZE AES_BLOCK_SIZE
