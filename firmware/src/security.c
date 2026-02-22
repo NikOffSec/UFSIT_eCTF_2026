@@ -18,8 +18,8 @@
 
 bool check_pin(unsigned char *pin) {
 
-    print_debug(HSM_PIN);
-    print_debug(pin);
+    //TODO: COMPARE WITH HASH OF PIN INSTEAD OF PIN (or some other crypto solution?)
+    //DON'T KEEP RAW PIN IN MEMORY!!!!!!!!!!!
 
     // constant-time compare
     uint8_t diff = 0;
