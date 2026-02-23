@@ -180,12 +180,6 @@ bool check_pin(unsigned char *pin) {
     int rc1 = compute_pin_verifier_tag(pin_norm, t1);
     int rc2 = compute_pin_verifier_tag(pin_norm, t2);
 
-    //TODO: REMOVE BEFORE RELEASE
-    print_debug("HSM PIN:");
-    print_hex_debug(ref, 6);
-    print_debug("GIVEN PIN:");
-    print_hex_debug(in, 6);
-
     // Redundant checks to make single-fault bypass harder
     uint8_t ok1 = (uint8_t)((rc1 == 0) && gmac_tag_eq_ct(t1, HSM_PIN_TAG));
     uint8_t ok2 = (uint8_t)((rc2 == 0) && gmac_tag_eq_ct(t2, HSM_PIN_TAG));

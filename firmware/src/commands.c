@@ -243,7 +243,7 @@ int read(uint16_t pkt_len, uint8_t *buf) {
         return -1;
     }
 
-    size_t name_len = bounded_strnlen_local((const char*)curr_file.name, MAX_NAME_SIZE);
+    /*size_t name_len = bounded_strnlen_local((const char*)curr_file.name, MAX_NAME_SIZE);
     if (name_len >= MAX_NAME_SIZE) {
         //print_error("Invalid file name");
         return -1;
