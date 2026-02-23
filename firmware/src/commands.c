@@ -156,6 +156,7 @@ int write(uint16_t pkt_len, uint8_t *buf) {
     if(create_file(
         &curr_file,
         command->group_id,
+<<<<<<< Updated upstream
         command->name,
         command->contents_len,
         command->contents,
@@ -163,6 +164,12 @@ int write(uint16_t pkt_len, uint8_t *buf) {
         print_error("Error creating file");
         return -1;
     }
+=======
+        command->name, //
+        command->contents_len, //
+        command->contents
+    );
+>>>>>>> Stashed changes
 
     // Store the file persistently
     if (write_file(command->slot, &curr_file, command->uuid) < 0) {
