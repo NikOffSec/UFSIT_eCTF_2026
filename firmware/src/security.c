@@ -164,7 +164,7 @@ bool validate_permission(uint16_t group_id, permission_enum_t perm) {
 
         //TODO: REMOVE BEFORE RELEASE
         print_debug("group_id:");
-        print_hex_debug(&group_id,2);
+        print_hex_debug(&global_permissions[i].group_id,2);
         print_debug("read:");
         print_debug(global_permissions[i].read ? "Y" : "N");
         print_debug("write:");
