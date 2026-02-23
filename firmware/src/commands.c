@@ -204,9 +204,9 @@ static bool requester_has_receive_perm_for_group(const receive_request_t *req, u
  **********************************************************/
 
 /** @brief Perform the list operation */
-int list(uint16_t pkt_len, uint8_t *buf) {
+int list(uint16_t pkt_len, uint8_t *uart_buf) {
     (void)pkt_len;
-    list_command_t *command = (list_command_t*)buf;
+    list_command_t *command = (list_command_t*)uart_buf;
     list_response_t file_list;
 
     if (!check_pin(command->pin)) {
