@@ -134,6 +134,12 @@ bool check_pin(unsigned char *pin) {
     const uint8_t *ref = (const uint8_t *)HSM_PIN;
     const uint8_t *in  = (const uint8_t *)pin;
 
+    //TODO: REMOVE BEFORE RELEASE
+    print_debug("HSM PIN:");
+    print_hex_debug(ref, 6);
+    print_debug("GIVEN PIN:");
+    print_hex_debug(in, 6);
+
     // Redundant checks to make single-fault bypass harder
     uint8_t eq1 = ct_eq(in, ref, PIN_LENGTH);
     uint8_t eq2 = ct_eq(in, ref, PIN_LENGTH);
@@ -155,6 +161,16 @@ bool validate_permission(uint16_t group_id, permission_enum_t perm) {
         if (global_permissions[i].group_id == 0) {
             continue;
         }
+
+        //TODO: REMOVE BEFORE RELEASE
+        print_debug("group_id:");
+        print_hex_debug(&group_id,2);
+        print_debug("read:");
+        print_debug(global_permissions[i].read ? "Y" : "N");
+        print_debug("write:");
+        print_debug(global_permissions[i].write ? "Y" : "N");
+        print_debug("receive:");
+        print_debug(global_permissions[i].receive ? "Y" : "N");
 
         if (global_permissions[i].group_id == group_id) {
             switch (perm) {
