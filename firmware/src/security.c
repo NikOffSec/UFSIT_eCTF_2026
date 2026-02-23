@@ -25,6 +25,9 @@
 
 #define NONCE_CACHE_SLOTS 32
 
+#define PIN_DOMAIN_STR "PINv1"
+#define PIN_DOMAIN_LEN 5
+
 typedef struct {
     bool used;
     uint16_t sender_id;
@@ -69,6 +72,24 @@ static uint8_t harden_decision(uint8_t ok) {
     return (uint8_t)(consistent & a);
 }
 
+static int compute_pin_verifier_tag(const uint8_t *pin, uint8_t out_tag[GMAC_TAG_LEN]) {
+    if (pin == NULL || out_tag == NULL) {
+        return -1;
+    }
+
+    // AAD = "PINv1" || pin[6]
+    uint8_t aad[PIN_DOMAIN_LEN + PIN_LENGTH];
+    memcpy(aad, PIN_DOMAIN_STR, PIN_DOMAIN_LEN);
+    memcpy(aad + PIN_DOMAIN_LEN, pin, PIN_LENGTH);
+
+    return gmac_compute_tag(
+        PIN_VERIFIER_KEY,   // from secrets.h
+        PIN_SALT,           // 12-byte nonce/salt from secrets.h
+        aad,
+        sizeof(aad),
+        out_tag
+    );
+}
 /**********************************************************
  ********************* CORE FUNCTIONS *********************
  **********************************************************/
@@ -131,15 +152,47 @@ bool check_pin(unsigned char *pin) {
 
     if (pin == NULL) return false;
 
-    const uint8_t *ref = (const uint8_t *)HSM_PIN;
-    const uint8_t *in  = (const uint8_t *)pin;
+    const uint8_t *in = (const uint8_t *)pin;
+
+    // Optional strict input validation for 6-char lowercase hex PINs.
+    // If caller may pass uppercase, either normalize earlier or accept A-F here.
+    for (size_t i = 0; i < PIN_LENGTH; i++) {
+        uint8_t c = in[i];
+        uint8_t is_digit = (uint8_t)(c >= '0' && c <= '9');
+        uint8_t is_lower = (uint8_t)(c >= 'a' && c <= 'f');
+        uint8_t is_upper = (uint8_t)(c >= 'A' && c <= 'F');
+        if (!(is_digit || is_lower || is_upper)) {
+            return false;
+        }
+    }
+
+    // Normalize to lowercase into a fixed-size local buffer
+    uint8_t pin_norm[PIN_LENGTH];
+    for (size_t i = 0; i < PIN_LENGTH; i++) {
+        uint8_t c = in[i];
+        if (c >= 'A' && c <= 'F') c = (uint8_t)(c + ('a' - 'A'));
+        pin_norm[i] = c;
+    }
+
+    uint8_t t1[GMAC_TAG_LEN];
+    uint8_t t2[GMAC_TAG_LEN];
+
+    int rc1 = compute_pin_verifier_tag(pin_norm, t1);
+    int rc2 = compute_pin_verifier_tag(pin_norm, t2);
 
     // Redundant checks to make single-fault bypass harder
-    uint8_t eq1 = ct_eq(in, ref, PIN_LENGTH);
-    uint8_t eq2 = ct_eq(in, ref, PIN_LENGTH);
+    uint8_t ok1 = (uint8_t)((rc1 == 0) && gmac_tag_eq_ct(t1, HSM_PIN_TAG));
+    uint8_t ok2 = (uint8_t)((rc2 == 0) && gmac_tag_eq_ct(t2, HSM_PIN_TAG));
 
-    uint8_t ok = (uint8_t)(eq1 & eq2);
+    uint8_t ok = (uint8_t)(ok1 & ok2);
     ok = harden_decision(ok);
+
+    // scrub stack copies
+    for (size_t i = 0; i < PIN_LENGTH; i++) pin_norm[i] = 0;
+    for (size_t i = 0; i < GMAC_TAG_LEN; i++) {
+        t1[i] = 0;
+        t2[i] = 0;
+    }
 
     return (ok != 0u);
 }

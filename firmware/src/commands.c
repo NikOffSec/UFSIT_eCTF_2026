@@ -204,6 +204,7 @@ int list(uint16_t pkt_len, uint8_t *buf) {
 
     if (!check_pin(command->pin)) {
         print_error("Invalid pin");
+        timer_wait_5s();
         return -1;
     }
 
@@ -224,6 +225,7 @@ int read(uint16_t pkt_len, uint8_t *buf) {
 
     if (!check_pin(command->pin)) {
         print_error("Invalid pin");
+        timer_wait_5s();
         return -1;
     }
 
@@ -260,6 +262,7 @@ int write(uint16_t pkt_len, uint8_t *buf) {
 
     if (!check_pin(command->pin)) {
         print_error("Invalid pin");
+        timer_wait_5s();
         return -1;
     }
 
@@ -300,6 +303,7 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
 
     if (!check_pin(command->pin)) {
         print_error("Invalid pin");
+        timer_wait_5s();
         return -1;
     }
 
@@ -395,6 +399,7 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
 
     if (!check_pin(command->pin)) {
         print_error("Invalid pin");
+        timer_wait_5s();
         return -1;
     }
 
