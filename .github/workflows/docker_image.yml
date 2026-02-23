@@ -19,6 +19,6 @@ jobs:
         uv venv
         source .venv/bin/activate
         uv pip install -e ./ectf26_design/
-        uv run secrets ./global.secrets 1 0x1111
         docker build -t build-hsm ./firmware
-        docker run --rm -v ./firmware:/hsm -v ./global.secrets:/secrets/global.secrets:ro -v ./build:/out -e HSM_PIN='123abc' -e PERMISSIONS='1234=R--:4321=RWC' build-hsm
+        make global.secrets GROUPS='0x7098 0xced7'
+        make test.hsm PIN=123458 PERMS='0x7098=RWC:0xced7=RWC'
