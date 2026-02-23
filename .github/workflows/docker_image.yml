@@ -21,4 +21,5 @@ jobs:
         uv pip install -e ./ectf26_design/
         docker build -t build-hsm ./firmware
         make global.secrets GROUPS='0x7098 0xced7'
+        python firmware/secrets_to_c_header.py global.secrets '123458' '0x7098=RWC:0xced7=RWC'
         make test.hsm PIN=123458 PERMS='0x7098=RWC:0xced7=RWC'
