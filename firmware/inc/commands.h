@@ -19,6 +19,7 @@
 #include "stdint.h"
 #include "simple_flash.h"
 #include "filesystem.h"
+#include <string.h>
 
 #ifdef CRYPTO_EXAMPLE
 #include "simple_crypto.h"
@@ -35,7 +36,8 @@ typedef unsigned char pin_t[6];
 
 // can support the largest struct size message size of the device for in place encryption/decryption
 #define MAX_COMMAND_SIZE 8272
-extern uint8_t tmp_command_buffer[MAX_COMMAND_SIZE];
+//TODO: THIS WILL NOT WORK WITH LARGER MESSAGES; TEMP FIX BECAUSE WE WERE OVERFLOWING THE STACK
+extern uint8_t tmp_command_buffer[100];
 
 #define MAX_MSG_SIZE sizeof(write_command_t)
 
@@ -104,7 +106,7 @@ typedef struct {
     uint32_t internal_random_number;
     file_t file;
     uint8_t padding[4];
-    uint8_t hash[HASH_SIZE];
+    //uint8_t hash[HASH_SIZE];
 } receive_response_t;
 
 typedef struct {

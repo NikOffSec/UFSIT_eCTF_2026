@@ -50,7 +50,7 @@ typedef uint16_t group_id_t;
 // This struct is functionally defined
 typedef struct {
     char uuid[UUID_SIZE];
-    uint16_t length;
+    uint16_t contents_len_and_metadata;
     uint16_t padding;
     unsigned int flash_addr;
 } filesystem_entry_t;
@@ -148,5 +148,16 @@ int read_file(slot_t slot, file_t *dest);
  * @return A filesystem_entry_t * on success. NULL on error.
 */
 const filesystem_entry_t *get_file_metadata(slot_t slot);
+#include "simple_uart.h"
+
+// Macro definitions to print the specified format for error messages
+#define print_error(msg) write_packet(CONTROL_INTERFACE, ERROR_MSG, msg, strlen(msg))
+
+// Macro definitions to print the specified format for debug messages
+#define print_debug(msg) write_packet(CONTROL_INTERFACE, DEBUG_MSG, msg, strlen(msg))
+#define print_hex_debug(msg, len) write_hex(CONTROL_INTERFACE, DEBUG_MSG, msg, len)
+
+// Macro definitions to write ack message
+#define write_ack(uart_id) write_packet(uart_id, ACK_MSG, NULL, 0)
 
 #endif

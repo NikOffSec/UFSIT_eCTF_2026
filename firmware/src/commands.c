@@ -32,9 +32,6 @@ static file_t current_file; /* retained to minimize diffs; currently unused */
  *   extern uint8_t tmp_command_buffer[MAX_COMMAND_SIZE];
  * and keep this definition here.
  */
-#ifndef TMP_COMMAND_BUFFER_DEFINED_IN_HEADER
-uint8_t tmp_command_buffer[MAX_COMMAND_SIZE];
-#endif
 
 // ===== GMAC test mode (TEMPORARY) =====
 // 1 = deterministic nonce, replay checks disabled (for integration testing only)
@@ -234,13 +231,15 @@ int read(uint16_t pkt_len, uint8_t *buf) {
         return -1;
     }
 
+    //Should not be necessary and strnlen isn't included in glibc on the HSMs
+    /*
     size_t name_len = strnlen((char*)curr_file.name, MAX_NAME_SIZE);
     if (name_len >= MAX_NAME_SIZE) {
         print_error("Invalid file name");
         return -1;
-    }
+    }*/
 
-    memcpy(file_info.name, &curr_file.name, name_len);
+    memcpy(file_info.name, &curr_file.name, sizeof(file_info.name));
     memcpy(file_info.contents, &curr_file.contents, curr_file.contents_len);
 
     if (!validate_permission(curr_file.group_id, PERM_READ)) {
