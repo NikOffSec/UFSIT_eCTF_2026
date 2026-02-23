@@ -94,6 +94,41 @@ int trng_init() {
 }
 
 unsigned int trng_generate() {
+
+    if (DL_TRNG_isHealthTestFail(TRNG)) {
+
+        // Check for false positive health fail
+        print_debug("[DEBUG] Runtime Health Check Fail Detected!");
+        
+        // 1. Clear the IRQ_HEALTH_FAIL interrupt
+        DL_TRNG_clearInterruptStatus(TRNG, DL_TRNG_INTERRUPT_HEALTH_FAIL_EVENT);
+
+        // 2. Power off the TRNG
+        DL_TRNG_sendCommand(TRNG, TRNG_CTL_CMD_PWR_OFF);
+        print_debug("[DEBUG] Powering Off the TRNG...");
+        while(!(DL_TRNG_isCommandDone(TRNG)));
+        DL_TRNG_clearInterruptStatus(TRNG, DL_TRNG_INTERRUPT_CMD_DONE_EVENT);
+        print_debug("[DEBUG] TRNG Powered Off");
+
+        // 3. Power on the TRNG to normal mode again
+        //  a. If the health failure is not asserted again, the TRNG can be used
+        //  b. If the health test fails a second time, go to step 1 and attempt to run the test a third time
+        //  c. If the health test fails a third time, there is catastrophic entropy loss and the TRNG should not be used
+        if (trng_init() != 0) {
+            print_debug("[DEBUG] TRNG Re-initialize fail, attempting second reboot.");
+            if (trng_init() != 0) {
+                print_debug("[DEBUG] TRNG Module failed to re-initialize second time. Catastrophic entropy loss detected. System now Stalling");
+                while(1);
+            }
+            else {
+                print_debug("[DEBUG] TRNG Module second re-initialize success. Module back online.");
+            }
+        }
+        else {
+            print_debug("[DEBUG] TRNG Module re-initialize success. Module back online.");
+        }
+    }
+
     unsigned int temp = -1;
     while(!(DL_TRNG_isCaptureReady(TRNG)));
     temp = DL_TRNG_getCapture(TRNG);
