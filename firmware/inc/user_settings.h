@@ -21,6 +21,7 @@
 /* AES-GCM/GMAC support */
 #define HAVE_AESGCM
 #define WOLFSSL_AES_DIRECT
+#define WOLFSSL_AESGCM
 
 /* Disable algorithms you don't need */
 #define NO_RSA

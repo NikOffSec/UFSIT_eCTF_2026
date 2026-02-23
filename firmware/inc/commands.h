@@ -25,6 +25,7 @@
 #endif
 
 #define pkt_len_t uint16_t
+#define RECEIVE_RESPONSE_HASH_LEN 16
 
 #define GMAC_NONCE_LEN 12
 #define GMAC_TAG_LEN   16
@@ -104,7 +105,7 @@ typedef struct {
     uint32_t internal_random_number;
     file_t file;
     uint8_t padding[4];
-    uint8_t hash[HASH_SIZE];
+    uint8_t hash[RECEIVE_RESPONSE_HASH_LEN];
 } receive_response_t;
 
 typedef struct {

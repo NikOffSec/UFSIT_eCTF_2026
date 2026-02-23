@@ -87,6 +87,16 @@ static bool nonce_accept_test(uint16_t sender_id, const uint8_t *nonce, size_t n
 #endif
 }
 
+// Local strnlen helper function to fix linker issue
+static size_t bounded_strnlen_local(const char *s, size_t max_len) {
+    size_t i = 0;
+    if (s == NULL) return 0;
+    while (i < max_len && s[i] != '\0') {
+        i++;
+    }
+    return i;
+}
+
 /** @brief List out the files on the system.
  *      To be utilized by list and interrogate
  *
@@ -236,7 +246,7 @@ int read(uint16_t pkt_len, uint8_t *buf) {
         return -1;
     }
 
-    size_t name_len = strnlen((char*)curr_file.name, MAX_NAME_SIZE);
+    size_t name_len = bounded_strnlen_local((const char*)curr_file.name, MAX_NAME_SIZE);
     if (name_len >= MAX_NAME_SIZE) {
         print_error("Invalid file name");
         return -1;
