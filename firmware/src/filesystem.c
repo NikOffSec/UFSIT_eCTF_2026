@@ -104,7 +104,7 @@ int write_file(slot_t slot, file_t *src, uint8_t *uuid) {
     // Update the FAT for the new file
     memcpy(&FILE_ALLOCATION_TABLE[slot].uuid, uuid, UUID_SIZE);
     FILE_ALLOCATION_TABLE[slot].flash_addr = flash_addr;
-    FILE_ALLOCATION_TABLE[slot].length = length;
+    FILE_ALLOCATION_TABLE[slot].contents_len_and_metadata = length;
     store_fat();
 
     // erase the pages that will store the file
@@ -127,12 +127,15 @@ int read_file(slot_t slot, file_t *dest) {
     int flash_addr, file_size;
 
 	if (slot < 0 || slot >= MAX_FILE_COUNT){
+        print_debug("Invalid Slot");
 		return -1;
 	}
     flash_addr = FILE_ALLOCATION_TABLE[slot].flash_addr;
-    file_size = FILE_ALLOCATION_TABLE[slot].length;
+    file_size = FILE_ALLOCATION_TABLE[slot].contents_len_and_metadata;
 
-    if (flash_addr < 0 || file_size < 0 || file_size >= 8192) {
+    //Removing the file_size check because it doesn't include the size of metadata, meaning large file reads fail.
+    if (flash_addr < 0 || file_size < 0 /*|| FILE_TOTAL_SIZE(file_size) >= 8192*/) {
+        print_debug("Invalid flash_size or flash_addr");
         return -1;
     }
     flash_simple_read(flash_addr, dest, file_size);

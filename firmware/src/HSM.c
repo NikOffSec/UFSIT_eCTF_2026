@@ -104,13 +104,13 @@ void init() {
 
     if (trng_init()) {
         while (1) {
-            print_error("ERROR: TRNG CAN'T INIT");
+            //print_error("ERROR: TRNG CAN'T INIT");
         }
     }
 
     if (timer_init()) {
         while (1) {
-            print_error("ERROR: COUNTER CAN'T INIT");
+            //print_error("ERROR: COUNTER CAN'T INIT");
         }
     }
 }
@@ -146,16 +146,16 @@ int main(void) {
             STATUS_LED_OFF();
             switch (result) {
             case MSG_BAD_PTR:
-                print_error("Bad cmd pointer\n");
+                //print_error("Bad cmd pointer\n");
                 break;
             case MSG_NO_ACK:
-                print_error("Failed to receive ACK from host\n");
+                //print_error("Failed to receive ACK from host\n");
                 break;
             case MSG_BAD_LEN:
-                print_error("Received bad length\n");
+                //print_error("Received bad length\n");
                 break;
             default:
-                print_error("Failed to receive cmd from host\n");
+                //print_error("Failed to receive cmd from host\n");
                 break;
             }
             continue;
@@ -209,7 +209,7 @@ int main(void) {
         default:
             STATUS_LED_OFF();
             sprintf(output_buf, "Invalid Command: %c\n", cmd);
-            print_error(output_buf);
+            //print_error(output_buf);
             break;
         }
     }

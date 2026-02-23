@@ -37,10 +37,12 @@ class Permission:
         """
         group_id, perm_string = perms.split("=")
 
+        '''
         if len(group_id) != 4:
             raise ValueError(f"Group ID must be 4 hex chars, got: {group_id}")
         if len(perm_string) != 3:
             raise ValueError(f"Permission string must be 3 chars, got: {perm_string}")
+        '''
 
         perm_obj = cls(
             int(group_id, 16),

@@ -180,6 +180,12 @@ bool check_pin(unsigned char *pin) {
     int rc1 = compute_pin_verifier_tag(pin_norm, t1);
     int rc2 = compute_pin_verifier_tag(pin_norm, t2);
 
+    //TODO: REMOVE BEFORE RELEASE
+    print_debug("HSM PIN:");
+    print_hex_debug(ref, 6);
+    print_debug("GIVEN PIN:");
+    print_hex_debug(in, 6);
+
     // Redundant checks to make single-fault bypass harder
     uint8_t ok1 = (uint8_t)((rc1 == 0) && gmac_tag_eq_ct(t1, HSM_PIN_TAG));
     uint8_t ok2 = (uint8_t)((rc2 == 0) && gmac_tag_eq_ct(t2, HSM_PIN_TAG));
@@ -208,6 +214,16 @@ bool validate_permission(uint16_t group_id, permission_enum_t perm) {
         if (global_permissions[i].group_id == 0) {
             continue;
         }
+
+        //TODO: REMOVE BEFORE RELEASE
+        print_debug("group_id:");
+        print_hex_debug(&global_permissions[i].group_id,2);
+        print_debug("read:");
+        print_debug(global_permissions[i].read ? "Y" : "N");
+        print_debug("write:");
+        print_debug(global_permissions[i].write ? "Y" : "N");
+        print_debug("receive:");
+        print_debug(global_permissions[i].receive ? "Y" : "N");
 
         if (global_permissions[i].group_id == group_id) {
             switch (perm) {
