@@ -14,10 +14,10 @@ import os
 import json
 import argparse
 from dataclasses import dataclass
+import secrets as pysecrets
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-
-# Keep this in sync with firmware/inc/security.h
-# (Reference starter code typically uses MAX_PERMS = 8)
+# Keep this as 8 
 MAX_PERMS = 8
 
 
@@ -90,6 +90,44 @@ def _hex_to_c_array(hex_str: str) -> str:
     """Convert hex string -> C byte initializer string."""
     b = bytes.fromhex(hex_str)
     return ", ".join(f"0x{x:02x}" for x in b)
+
+PIN_LENGTH = 6
+PIN_SALT_LEN = 12
+PIN_TAG_LEN = 16
+PIN_VERIFIER_KEY_LEN = 16
+PIN_DOMAIN = b"PINv1"
+
+
+def _validate_hsm_pin(pin: str) -> bytes:
+    """Require exactly 6 hex chars; normalize to lowercase bytes."""
+    if not isinstance(pin, str):
+        raise ValueError("HSM PIN must be a string")
+    if len(pin) != PIN_LENGTH:
+        raise ValueError(f"HSM PIN must be exactly {PIN_LENGTH} characters")
+    pin_norm = pin.lower()
+    if any(c not in "0123456789abcdef" for c in pin_norm):
+        raise ValueError("HSM PIN must be lowercase/uppercase hex chars only (0-9, a-f)")
+    return pin_norm.encode("ascii")
+
+
+def _compute_pin_gmac_tag(pin_bytes: bytes, key: bytes, nonce12: bytes) -> bytes:
+    """
+    Compute GMAC tag using AESGCM with empty plaintext and AAD = PIN_DOMAIN || pin.
+    AESGCM.encrypt returns ciphertext||tag; ciphertext is empty => result is 16-byte tag.
+    """
+    if len(pin_bytes) != PIN_LENGTH:
+        raise ValueError("pin_bytes wrong length")
+    if len(key) != PIN_VERIFIER_KEY_LEN:
+        raise ValueError("PIN verifier key must be 16 bytes")
+    if len(nonce12) != PIN_SALT_LEN:
+        raise ValueError("PIN salt/nonce must be 12 bytes")
+
+    aad = PIN_DOMAIN + pin_bytes
+    aesgcm = AESGCM(key)
+    out = aesgcm.encrypt(nonce12, b"", aad)
+    if len(out) != PIN_TAG_LEN:
+        raise ValueError(f"Expected {PIN_TAG_LEN}-byte GMAC tag, got {len(out)}")
+    return out
 
 
 def _parse_secrets_blob(secrets_blob: bytes) -> dict:
@@ -171,6 +209,18 @@ def secrets_to_c_header(
     secrets_data = _parse_secrets_blob(secrets_bytes)
     valid_groups = secrets_data["groups"]
     crypto = secrets_data["crypto"]
+    
+    # Build-time PIN -> verifier material (do NOT emit plaintext PIN)
+    pin_bytes = _validate_hsm_pin(hsm_pin)
+
+    # Generate dedicated key + salt for PIN verifier (simple, explicit)
+    pin_verifier_key = pysecrets.token_bytes(PIN_VERIFIER_KEY_LEN)
+    pin_salt = pysecrets.token_bytes(PIN_SALT_LEN)
+    hsm_pin_tag = _compute_pin_gmac_tag(pin_bytes, pin_verifier_key, pin_salt)
+
+    pin_verifier_key_c = ", ".join(f"0x{x:02x}" for x in pin_verifier_key)
+    pin_salt_c = ", ".join(f"0x{x:02x}" for x in pin_salt)
+    hsm_pin_tag_c = ", ".join(f"0x{x:02x}" for x in hsm_pin_tag)
 
     _validate_permissions_against_groups(permissions, valid_groups)
 
@@ -196,8 +246,18 @@ def secrets_to_c_header(
         f.write('#include <stdbool.h>\n')
         f.write('#include "security.h"\n\n')
 
-        # HSM PIN
-        f.write(f'#define HSM_PIN "{hsm_pin}"\n\n')
+        # HSM PIN verifier material (plaintext PIN is NOT stored)
+        f.write(f"#define PIN_SALT_LEN {PIN_SALT_LEN}\n")
+        f.write(f"static const uint8_t PIN_SALT[PIN_SALT_LEN] = {{{pin_salt_c}}};\n\n")
+
+        f.write(f"#define PIN_VERIFIER_KEY_LEN {PIN_VERIFIER_KEY_LEN}\n")
+        f.write(
+            f"static const uint8_t PIN_VERIFIER_KEY[PIN_VERIFIER_KEY_LEN] = "
+            f"{{{pin_verifier_key_c}}};\n\n"
+        )
+
+        f.write(f"#define HSM_PIN_TAG_LEN {PIN_TAG_LEN}\n")
+        f.write(f"static const uint8_t HSM_PIN_TAG[HSM_PIN_TAG_LEN] = {{{hsm_pin_tag_c}}};\n\n")
 
         # GMAC / master keys
         f.write("#define GMAC_KEY_LEN 16\n")

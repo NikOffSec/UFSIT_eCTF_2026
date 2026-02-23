@@ -14,10 +14,18 @@ WORKDIR /root
 # do this first because it takes the longest
 RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     python3 \
+    python3-pip \
+    python3-venv \
     make \
     wget \
     build-essential \
     unzip
+
+RUN python3 -m venv /opt/build-venv && \
+    /opt/build-venv/bin/python -m pip install --upgrade pip && \
+    /opt/build-venv/bin/python -m pip install --no-cache-dir cryptography==46.0.5
+
+ENV PATH="/opt/build-venv/bin:${PATH}"
 
 ENV MSPM0_SDK_INSTALL_DIR=/opt/mspm0-sdk-mspm0_sdk_2_06_00_05
 ENV TICLANG_ARMCOMPILER=/opt/ti-cgt-armllvm_4.0.3.LTS
@@ -26,6 +34,7 @@ ENV TICLANG_ARMCOMPILER=/opt/ti-cgt-armllvm_4.0.3.LTS
 RUN wget https://github.com/TexasInstruments/mspm0-sdk/archive/refs/tags/mspm0_sdk_2_06_00_05.zip && \
     unzip mspm0_sdk_2_06_00_05.zip -d /opt && \
     rm -f -r mspm0_sdk_2_06_00_05.zip ${MSPM0_SDK_INSTALL_DIR}/docs ${MSPM0_SDK_INSTALL_DIR}/examples
+
 
 # Install TI-Clang for curr machine's arch
 RUN if [ $(uname -m) = "x86_64" ]; then \

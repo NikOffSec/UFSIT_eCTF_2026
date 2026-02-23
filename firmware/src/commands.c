@@ -84,6 +84,16 @@ static bool nonce_accept_test(uint16_t sender_id, const uint8_t *nonce, size_t n
 #endif
 }
 
+// Local strnlen helper function to fix linker issue
+static size_t bounded_strnlen_local(const char *s, size_t max_len) {
+    size_t i = 0;
+    if (s == NULL) return 0;
+    while (i < max_len && s[i] != '\0') {
+        i++;
+    }
+    return i;
+}
+
 /** @brief List out the files on the system.
  *      To be utilized by list and interrogate
  *
@@ -200,7 +210,8 @@ int list(uint16_t pkt_len, uint8_t *buf) {
     list_response_t file_list;
 
     if (!check_pin(command->pin)) {
-        //print_error("Invalid pin");
+        print_error("Invalid pin");
+        timer_wait_5s();
         return -1;
     }
 
@@ -220,7 +231,8 @@ int read(uint16_t pkt_len, uint8_t *buf) {
     file_t curr_file;
 
     if (!check_pin(command->pin)) {
-        //print_error("Invalid pin");
+        print_error("Invalid pin");
+        timer_wait_5s();
         return -1;
     }
 
@@ -231,9 +243,7 @@ int read(uint16_t pkt_len, uint8_t *buf) {
         return -1;
     }
 
-    //Should not be necessary and strnlen isn't included in glibc on the HSMs
-    /*
-    size_t name_len = strnlen((char*)curr_file.name, MAX_NAME_SIZE);
+    size_t name_len = bounded_strnlen_local((const char*)curr_file.name, MAX_NAME_SIZE);
     if (name_len >= MAX_NAME_SIZE) {
         //print_error("Invalid file name");
         return -1;
@@ -258,7 +268,8 @@ int write(uint16_t pkt_len, uint8_t *buf) {
     file_t curr_file;
 
     if (!check_pin(command->pin)) {
-        //print_error("Invalid pin");
+        print_error("Invalid pin");
+        timer_wait_5s();
         return -1;
     }
 
@@ -298,6 +309,8 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     uint16_t len_recv_msg;
 
     if (!check_pin(command->pin)) {
+        print_error("Invalid pin");
+        timer_wait_5s();
         return -1;
     }
 
@@ -392,7 +405,8 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
     uint16_t len_recv_msg;
 
     if (!check_pin(command->pin)) {
-        //print_error("Invalid pin");
+        print_error("Invalid pin");
+        timer_wait_5s();
         return -1;
     }
 
