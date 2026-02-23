@@ -200,7 +200,7 @@ int list(uint16_t pkt_len, uint8_t *buf) {
     list_response_t file_list;
 
     if (!check_pin(command->pin)) {
-        print_error("Invalid pin");
+        //print_error("Invalid pin");
         return -1;
     }
 
@@ -220,14 +220,14 @@ int read(uint16_t pkt_len, uint8_t *buf) {
     file_t curr_file;
 
     if (!check_pin(command->pin)) {
-        print_error("Invalid pin");
+        //print_error("Invalid pin");
         return -1;
     }
 
     memset(&file_info, 0, sizeof(read_response_t));
 
     if (read_file(command->slot, &curr_file) < 0) {
-        print_error("Failed to read file");
+        //print_error("Failed to read file");
         return -1;
     }
 
@@ -235,7 +235,7 @@ int read(uint16_t pkt_len, uint8_t *buf) {
     /*
     size_t name_len = strnlen((char*)curr_file.name, MAX_NAME_SIZE);
     if (name_len >= MAX_NAME_SIZE) {
-        print_error("Invalid file name");
+        //print_error("Invalid file name");
         return -1;
     }*/
 
@@ -243,7 +243,7 @@ int read(uint16_t pkt_len, uint8_t *buf) {
     memcpy(file_info.contents, &curr_file.contents, curr_file.contents_len);
 
     if (!validate_permission(curr_file.group_id, PERM_READ)) {
-        print_error("Invalid permission");
+        //print_error("Invalid permission");
         return -1;
     }
 
@@ -258,12 +258,12 @@ int write(uint16_t pkt_len, uint8_t *buf) {
     file_t curr_file;
 
     if (!check_pin(command->pin)) {
-        print_error("Invalid pin");
+        //print_error("Invalid pin");
         return -1;
     }
 
     if (!validate_permission(command->group_id, PERM_WRITE)) {
-        print_error("Invalid permission");
+        //print_error("Invalid permission");
         return -1;
     }
 
@@ -275,12 +275,12 @@ int write(uint16_t pkt_len, uint8_t *buf) {
             command->contents_len,
             command->contents,
             pkt_len) != 0) {
-        print_error("Error creating file");
+        //print_error("Error creating file");
         return -1;
     }
 
     if (write_file(command->slot, &curr_file, command->uuid) < 0) {
-        print_error("Error writing file");
+        //print_error("Error writing file");
         return -1;
     }
 
@@ -298,7 +298,6 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     uint16_t len_recv_msg;
 
     if (!check_pin(command->pin)) {
-        print_error("Invalid pin");
         return -1;
     }
 
@@ -312,13 +311,13 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     size_t perm_blob_len = pack_permissions_sorted(
         global_permissions, MAX_PERMS, request.perm_blob, sizeof(request.perm_blob));
     if (perm_blob_len == 0 && MAX_PERMS > 0) {
-        print_error("Packing permissions failed");
+        //print_error("Packing permissions failed");
         return -1;
     }
     request.perm_blob_len = (uint8_t)perm_blob_len;
 
     if (get_request_nonce(request.nonce) != 0) {
-        print_error("Nonce generation failed");
+        //print_error("Nonce generation failed");
         return -1;
     }
 
@@ -326,12 +325,12 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     uint8_t aad[2 + 2 + 1 + PERM_BLOB_MAX];
     size_t aad_len = build_receive_request_aad(&request, aad, sizeof(aad));
     if (aad_len == 0) {
-        print_error("AAD build failed");
+        //print_error("AAD build failed");
         return -1;
     }
 
     if (gmac_compute_tag(GMAC_KEY, request.nonce, aad, aad_len, request.tag) != 0) {
-        print_error("GMAC tag generation failed");
+        //print_error("GMAC tag generation failed");
         return -1;
     }
 
@@ -361,22 +360,22 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     // Receive file response (legacy response struct retained for compatibility)
     len_recv_msg = sizeof(recv_resp);
     if (read_packet(TRANSFER_INTERFACE, &cmd, &recv_resp, &len_recv_msg) != MSG_OK) {
-        print_error("Failed to receive response");
+        //print_error("Failed to receive response");
         return -1;
     }
 
     if (cmd != RECEIVE_MSG) {
-        print_error("Opcode mismatch");
+        //print_error("Opcode mismatch");
         return -1;
     }
 
     if (len_recv_msg < sizeof(recv_resp.uuid) + sizeof(recv_resp.internal_random_number)) {
-        print_error("Receive response too short");
+        //print_error("Receive response too short");
         return -1;
     }
 
     if (write_file(command->write_slot, &recv_resp.file, recv_resp.uuid) < 0) {
-        print_error("Writing received file failed");
+        //print_error("Writing received file failed");
         return -1;
     }
 
@@ -393,7 +392,7 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
     uint16_t len_recv_msg;
 
     if (!check_pin(command->pin)) {
-        print_error("Invalid pin");
+        //print_error("Invalid pin");
         return -1;
     }
 
@@ -401,12 +400,12 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
 
     len_recv_msg = sizeof(final_list_buf);
     if (read_packet(TRANSFER_INTERFACE, &cmd, &final_list_buf, &len_recv_msg) != MSG_OK) {
-        print_error("Failed to receive interrogate response");
+        //print_error("Failed to receive interrogate response");
         return -1;
     }
 
     if (cmd != INTERROGATE_MSG) {
-        print_error("Opcode mismatch");
+        //print_error("Opcode mismatch");
         return -1;
     }
 
@@ -430,7 +429,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
     memset(uart_buf, 0, sizeof(uart_buf));
     if (read_packet(TRANSFER_INTERFACE, &cmd, uart_buf, &read_length) != MSG_OK) {
-        print_error("listen: failed to read transfer packet");
+        //print_error("listen: failed to read transfer packet");
         return -1;
     }
 
@@ -455,64 +454,64 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             // For now require a full fixed-size receive_request_t packet
             if (read_length != sizeof(receive_request_t)) {
-                print_error("RECEIVE request bad length");
+                //print_error("RECEIVE request bad length");
                 return -1;
             }
 
             memcpy(&req, uart_buf, sizeof(req));
 
             if (req.perm_blob_len > PERM_BLOB_MAX || (req.perm_blob_len % 3u) != 0u) {
-                print_error("Invalid permission blob length");
+                //print_error("Invalid permission blob length");
                 return -1;
             }
 
             aad_len = build_receive_request_aad(&req, aad, sizeof(aad));
             if (aad_len == 0) {
-                print_error("AAD build failed");
+                //print_error("AAD build failed");
                 return -1;
             }
 
             if (gmac_compute_tag(GMAC_KEY, req.nonce, aad, aad_len, expected_tag) != 0) {
-                print_error("GMAC compute failed");
+                //print_error("GMAC compute failed");
                 return -1;
             }
 
             if (!gmac_tag_eq_ct(expected_tag, req.tag)) {
-                print_error("GMAC verify failed");
+                //print_error("GMAC verify failed");
                 return -1;
             }
 
             // Replay protection after successful tag verify (prevents cache poisoning)
             if (!nonce_accept_test(req.sender_id, req.nonce, GMAC_NONCE_LEN)) {
-                print_error("Replay detected");
+                //print_error("Replay detected");
                 return -1;
             }
 
             if ((uint16_t)req.slot >= MAX_FILE_COUNT) {
-                print_error("Invalid slot");
+                //print_error("Invalid slot");
                 return -1;
             }
 
             if (read_file(req.slot, &recv_resp.file) < 0) {
-                print_error("Failed to read file");
+                //print_error("Failed to read file");
                 return -1;
             }
 
             // Sender-side local policy: this board must be allowed to transfer this group
             if (!validate_permission(recv_resp.file.group_id, PERM_RECEIVE)) {
-                print_error("Local policy denies transfer for file group");
+                //print_error("Local policy denies transfer for file group");
                 return -1;
             }
 
             // Requester-side claimed perms (authenticated by GMAC)
             if (!requester_has_receive_perm_for_group(&req, recv_resp.file.group_id)) {
-                print_error("Requester lacks RECEIVE permission for file group");
+                //print_error("Requester lacks RECEIVE permission for file group");
                 return -1;
             }
 
             metadata = get_file_metadata(req.slot);
             if (metadata == NULL) {
-                print_error("Getting metadata failed");
+                //print_error("Getting metadata failed");
                 return -1;
             }
 
@@ -529,7 +528,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
         }
 
         default:
-            print_error("listen: unsupported transfer opcode");
+            //print_error("listen: unsupported transfer opcode");
             return -1;
     }
 
