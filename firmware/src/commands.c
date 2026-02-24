@@ -490,7 +490,8 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     }
 
     // Build AAD and compute GMAC
-    uint8_t aad[2 + 2 + 1 + PERM_BLOB_MAX];
+    uint8_t aad[2 + 4 + 2 + 1 + PERM_BLOB_MAX];
+    request.ctr = replay_ctr_next_local();
     size_t aad_len = build_receive_request_aad(&request, aad, sizeof(aad));
     if (aad_len == 0) {
         //print_error("AAD build failed");
@@ -525,12 +526,12 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
         write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&request, sizeof(receive_request_t));
     #endif
 
-        // Receive file response (legacy response struct retained for compatibility)
-        len_recv_msg = sizeof(recv_resp);
-        if (len_recv_msg != sizeof(receive_response_t)) {
-        //print_error("Receive response bad length");
-        return -1;
-    }
+    // Receive file response (legacy response struct retained for compatibility)
+    len_recv_msg = sizeof(recv_resp);
+    if (read_packet(TRANSFER_INTERFACE, &cmd, &recv_resp, &len_recv_msg) != MSG_OK) return -1;
+
+    if (cmd != RECEIVE_MSG) return -1;
+    if (len_recv_msg != sizeof(receive_response_t)) return -1;
 
     if (recv_resp.file.contents_len > MAX_CONTENTS_SIZE) {
         //print_error("Receive response file too large");
@@ -538,7 +539,7 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     }
 
     // Build expected response AAD bound to the original request we sent
-    uint8_t resp_aad[RX_RESP_DOMAIN_LEN + 2 + 2 + UUID_SIZE + 2 + 2 + MAX_NAME_SIZE + MAX_CONTENTS_SIZE];
+    uint8_t resp_aad[RX_RESP_DOMAIN_LEN + 2 + 2 + 4 + 2 + GMAC_NONCE_LEN + UUID_SIZE + 2 + 2 + MAX_NAME_SIZE + MAX_CONTENTS_SIZE];
     uint8_t expected_resp_tag[GMAC_TAG_LEN];
 
     size_t resp_aad_len = build_receive_response_aad(&request, &recv_resp, resp_aad, sizeof(resp_aad));
@@ -556,7 +557,7 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
         //print_error("Receive response GMAC verify failed");
         return -1;
     }
-    if (!replay_ctr_accept(req.sender_id, req.ctr)) return -1;
+    if (!replay_ctr_accept(recv_resp.responder_id, recv_resp.ctr)) return -1;
 
     if (cmd != RECEIVE_MSG) {
         //print_error("Opcode mismatch");
@@ -594,10 +595,6 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
     // Build authenticated interrogate request
     req.sender_id = HSM_ID;
     req.ctr = replay_ctr_next_local();
-    get_request_nonce(req.nonce);
-
-    size_t aad_len = build_interrogate_request_aad(&req, aad, sizeof(aad));
-    gmac_compute_tag(...);
 
     if (get_request_nonce(req.nonce) != 0) return -1;
 
@@ -625,7 +622,7 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
 
     if (gmac_compute_tag(GMAC_KEY, resp.nonce, resp_aad, resp_aad_len, expected_tag) != 0) return -1;
     if (!gmac_tag_eq_ct(expected_tag, resp.tag)) return -1;
-    if (!replay_ctr_accept(req.sender_id, req.ctr)) return -1;
+    if (!replay_ctr_accept(resp.responder_id, resp.ctr)) return -1;
 
     // Optional but recommended: replay protect response
     if (!nonce_accept_test(resp.responder_id, resp.nonce, GMAC_NONCE_LEN)) return -1;
@@ -661,8 +658,8 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             interrogate_request_t req;
             interrogate_response_t resp;
             uint8_t expected_req_tag[GMAC_TAG_LEN];
-            uint8_t req_aad[INTR_REQ_DOMAIN_LEN + 2];
-            uint8_t resp_aad[INTR_RESP_DOMAIN_LEN + 2 + 2 + GMAC_NONCE_LEN + sizeof(list_response_t)];
+            uint8_t req_aad[INTR_REQ_DOMAIN_LEN + 2 + 4];
+            uint8_t resp_aad[INTR_RESP_DOMAIN_LEN + 2 + 2 + 4 + GMAC_NONCE_LEN + sizeof(list_response_t)];
             size_t req_aad_len, resp_aad_len;
 
             if (read_length != sizeof(interrogate_request_t)) return -1;
@@ -700,11 +697,10 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, &resp, sizeof(resp));
             break;
-            }
         }   
         case RECEIVE_MSG: {
             receive_request_t req;
-            uint8_t aad[2 + 2 + 1 + PERM_BLOB_MAX];
+            uint8_t aad[2 + 4 + 2 + 1 + PERM_BLOB_MAX];
             uint8_t expected_tag[GMAC_TAG_LEN];
             size_t aad_len;
 
@@ -787,7 +783,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             }
 
             // Build response AAD
-            uint8_t resp_aad[RX_RESP_DOMAIN_LEN + 2 + 2 + UUID_SIZE + 2 + 2 + MAX_NAME_SIZE + MAX_CONTENTS_SIZE];
+            uint8_t resp_aad[RX_RESP_DOMAIN_LEN + 2 + 2 + 4 + 2 + GMAC_NONCE_LEN + UUID_SIZE + 2 + 2 + MAX_NAME_SIZE + MAX_CONTENTS_SIZE];
             size_t resp_aad_len = build_receive_response_aad(&req, &recv_resp, resp_aad, sizeof(resp_aad));
             if (resp_aad_len == 0) {
                 //print_error("Response AAD build failed");
@@ -802,6 +798,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             write_length = sizeof(receive_response_t);
             write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, &recv_resp, write_length);
+            break;
         }
         default:
             //print_error("listen: unsupported transfer opcode");
