@@ -33,6 +33,8 @@ typedef struct {
     bool receive;
 } group_permission_t;
 
+bool replay_ctr_accept(uint16_t sender_id, uint32_t ctr);
+uint32_t replay_ctr_next_local(void);
 
 int trng_get_bytes(uint8_t *out, size_t len);
 

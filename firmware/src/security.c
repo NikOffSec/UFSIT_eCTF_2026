@@ -94,6 +94,63 @@ static int compute_pin_verifier_tag(const uint8_t *pin, uint8_t out_tag[GMAC_TAG
  ********************* CORE FUNCTIONS *********************
  **********************************************************/
 
+#define REPLAY_CTR_SLOTS 32
+
+typedef struct {
+    bool used;
+    uint16_t sender_id;
+    uint32_t highest_ctr;
+} replay_ctr_entry_t;
+
+static replay_ctr_entry_t g_replay_ctr[REPLAY_CTR_SLOTS];
+static uint8_t g_replay_ctr_rr_idx = 0;
+
+/* Local outbound counter (RAM only for now; resets on reboot) */
+static uint32_t g_local_send_ctr = 1u;
+
+uint32_t replay_ctr_next_local(void) {
+    if (g_local_send_ctr == 0u) {
+        g_local_send_ctr = 1u;   // reserve 0 as invalid
+    }
+    return g_local_send_ctr++;
+}
+
+bool replay_ctr_accept(uint16_t sender_id, uint32_t ctr) {
+    if (ctr == 0u) return false;
+
+    // Existing sender?
+    for (size_t i = 0; i < REPLAY_CTR_SLOTS; i++) {
+        if (!g_replay_ctr[i].used) continue;
+        if (g_replay_ctr[i].sender_id != sender_id) continue;
+
+        // Strictly increasing only
+        if (ctr <= g_replay_ctr[i].highest_ctr) {
+            return false;
+        }
+
+        g_replay_ctr[i].highest_ctr = ctr;
+        return true;
+    }
+
+    // New sender -> use empty slot if available
+    for (size_t i = 0; i < REPLAY_CTR_SLOTS; i++) {
+        if (!g_replay_ctr[i].used) {
+            g_replay_ctr[i].used = true;
+            g_replay_ctr[i].sender_id = sender_id;
+            g_replay_ctr[i].highest_ctr = ctr;
+            return true;
+        }
+    }
+
+    // Table full -> replace round-robin
+    g_replay_ctr[g_replay_ctr_rr_idx].used = true;
+    g_replay_ctr[g_replay_ctr_rr_idx].sender_id = sender_id;
+    g_replay_ctr[g_replay_ctr_rr_idx].highest_ctr = ctr;
+    g_replay_ctr_rr_idx = (uint8_t)((g_replay_ctr_rr_idx + 1u) % REPLAY_CTR_SLOTS);
+
+    return true;
+}
+
 // Reject exact nonce replay per sender_id, otherwise accept and cache
 bool nonce_accept(uint16_t sender_id, const uint8_t *nonce, size_t nonce_len) {
     if (nonce == NULL || nonce_len != GMAC_NONCE_LEN) {

@@ -45,6 +45,11 @@ static file_t current_file; /* retained to minimize diffs; currently unused */
 #define HSM_ID 0x0001
 #endif
 
+#define INTR_REQ_DOMAIN "INTRQv1"
+#define INTR_REQ_DOMAIN_LEN 7
+#define INTR_RESP_DOMAIN "INTRSv1"
+#define INTR_RESP_DOMAIN_LEN 7
+
 // ---- Attack simulation flags (TEST ONLY) ----
 // Choose ONE at a time.
 // #define ATTACK_FLIP_TAG_BIT
@@ -55,6 +60,67 @@ static file_t current_file; /* retained to minimize diffs; currently unused */
 /**********************************************************
  ******************** HELPER FUNCTIONS ********************
  **********************************************************/
+
+static size_t build_interrogate_request_aad(const interrogate_request_t *req,
+                                            uint8_t *out, size_t out_cap) {
+    size_t need = INTR_REQ_DOMAIN_LEN + 2u + 4u;
+    if (out_cap < need) return 0;
+
+    size_t off = 0;
+    memcpy(&out[off], INTR_REQ_DOMAIN, INTR_REQ_DOMAIN_LEN);
+    off += INTR_REQ_DOMAIN_LEN;
+
+    out[off++] = (uint8_t)(req->sender_id >> 8);
+    out[off++] = (uint8_t)(req->sender_id & 0xFF);
+
+    // NEW: ctr (big-endian)
+    out[off++] = (uint8_t)(req->ctr >> 24);
+    out[off++] = (uint8_t)(req->ctr >> 16);
+    out[off++] = (uint8_t)(req->ctr >> 8);
+    out[off++] = (uint8_t)(req->ctr & 0xFF);
+
+    return off;
+}
+
+static size_t build_interrogate_response_aad(const interrogate_request_t *req,
+                                             const interrogate_response_t *resp,
+                                             uint8_t *out, size_t out_cap) {
+    // Only authenticate the populated list bytes, not the whole fixed struct.
+    if (resp->list.n_files > MAX_FILE_COUNT) return 0;
+
+    size_t list_len = LIST_PKT_LEN(resp->list.n_files);
+    size_t need = INTR_RESP_DOMAIN_LEN + 2u + 2u + 4u + GMAC_NONCE_LEN + list_len;
+
+    if (out_cap < need) return 0;
+
+    size_t off = 0;
+    memcpy(&out[off], INTR_RESP_DOMAIN, INTR_RESP_DOMAIN_LEN);
+    off += INTR_RESP_DOMAIN_LEN;
+
+    // req.sender_id
+    out[off++] = (uint8_t)(req->sender_id >> 8);
+    out[off++] = (uint8_t)(req->sender_id & 0xFF);
+
+    // resp.responder_id
+    out[off++] = (uint8_t)(resp->responder_id >> 8);
+    out[off++] = (uint8_t)(resp->responder_id & 0xFF);
+
+    // NEW: resp.ctr (big-endian)
+    out[off++] = (uint8_t)(resp->ctr >> 24);
+    out[off++] = (uint8_t)(resp->ctr >> 16);
+    out[off++] = (uint8_t)(resp->ctr >> 8);
+    out[off++] = (uint8_t)(resp->ctr & 0xFF);
+
+    // existing bind to request
+    memcpy(&out[off], req->nonce, GMAC_NONCE_LEN);
+    off += GMAC_NONCE_LEN;
+
+    // authenticate only meaningful list bytes
+    memcpy(&out[off], &resp->list, list_len);
+    off += list_len;
+
+    return off;
+}
 
 static int get_request_nonce(uint8_t nonce[GMAC_NONCE_LEN]) {
 #if GMAC_TEST_MODE_NO_NONCE
@@ -116,13 +182,16 @@ static size_t build_receive_response_aad(const receive_request_t *req,
     if (contents_len > MAX_CONTENTS_SIZE) return 0;
 
     size_t need = RX_RESP_DOMAIN_LEN
-                + 2u  // req.sender_id
-                + 2u  // req.slot
-                + UUID_SIZE
-                + 2u  // file.group_id
-                + 2u  // file.contents_len
-                + MAX_NAME_SIZE
-                + (size_t)contents_len;
+        + 2u  // req.sender_id
+        + 2u  // resp.responder_id
+        + 4u  // resp.ctr   NEW
+        + 2u  // req.slot
+        + UUID_SIZE
+        + 2u  // group_id
+        + 2u  // contents_len
+        + MAX_NAME_SIZE
+        + (size_t)contents_len
+        + GMAC_NONCE_LEN;
 
     if (out_cap < need) return 0;
 
@@ -131,11 +200,26 @@ static size_t build_receive_response_aad(const receive_request_t *req,
     memcpy(&out[off], RX_RESP_DOMAIN, RX_RESP_DOMAIN_LEN);
     off += RX_RESP_DOMAIN_LEN;
 
+    // req sender.id
     out[off++] = (uint8_t)(req->sender_id >> 8);
     out[off++] = (uint8_t)(req->sender_id & 0xFF);
 
+    // NEW: resp.responder_id
+    out[off++] = (uint8_t)(resp->responder_id >> 8);
+    out[off++] = (uint8_t)(resp->responder_id & 0xFF);
+
+    // NEW: resp.ctr (big-endian)
+    out[off++] = (uint8_t)(resp->ctr >> 24);
+    out[off++] = (uint8_t)(resp->ctr >> 16);
+    out[off++] = (uint8_t)(resp->ctr >> 8);
+    out[off++] = (uint8_t)(resp->ctr & 0xFF);
+
+    // req.slot (existing)
     out[off++] = (uint8_t)(((uint16_t)req->slot) >> 8);
     out[off++] = (uint8_t)(((uint16_t)req->slot) & 0xFF);
+
+    memcpy(&out[off], req->nonce, GMAC_NONCE_LEN);
+    off += GMAC_NONCE_LEN;
 
     memcpy(&out[off], resp->uuid, UUID_SIZE);
     off += UUID_SIZE;
@@ -226,13 +310,19 @@ static size_t build_receive_request_aad(const receive_request_t *req,
     // AAD fields:
     // sender_id (2) | slot (2) | perm_blob_len (1) | perm_blob (...)
     // Nonce is not included here because it is passed as the GCM nonce/IV.
-    size_t need = 2u + 2u + 1u + (size_t)req->perm_blob_len;
+    size_t need = 2u + 4u + 2u + 1u + req->perm_blob_len;
     if (out_cap < need) return 0;
 
     size_t off = 0;
 
     out[off++] = (uint8_t)(req->sender_id >> 8);
     out[off++] = (uint8_t)(req->sender_id & 0xFF);
+
+    // NEW: ctr (big-endian)
+    out[off++] = (uint8_t)(req->ctr >> 24);
+    out[off++] = (uint8_t)(req->ctr >> 16);
+    out[off++] = (uint8_t)(req->ctr >> 8);
+    out[off++] = (uint8_t)(req->ctr & 0xFF);
 
     out[off++] = (uint8_t)(((uint16_t)req->slot) >> 8);
     out[off++] = (uint8_t)(((uint16_t)req->slot) & 0xFF);
@@ -466,14 +556,10 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
         //print_error("Receive response GMAC verify failed");
         return -1;
     }
+    if (!replay_ctr_accept(req.sender_id, req.ctr)) return -1;
 
     if (cmd != RECEIVE_MSG) {
         //print_error("Opcode mismatch");
-        return -1;
-    }
-
-    if (len_recv_msg < sizeof(recv_resp.uuid) + sizeof(recv_resp.internal_random_number)) {
-        //print_error("Receive response too short");
         return -1;
     }
 
@@ -488,10 +574,12 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
 
 /** @brief Perform the interrogate operation */
 int interrogate(uint16_t pkt_len, uint8_t *buf) {
-    (void)pkt_len;
+    if (pkt_len != sizeof(interrogate_command_t)) return -1;
+
     interrogate_command_t *command = (interrogate_command_t*)buf;
+    interrogate_request_t req;
+    interrogate_response_t resp;
     msg_type_t cmd;
-    list_response_t final_list_buf;
     uint16_t len_recv_msg;
 
     if (!check_pin(command->pin)) {
@@ -500,20 +588,51 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
         return -1;
     }
 
-    write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, NULL, 0);
+    memset(&req, 0, sizeof(req));
+    memset(&resp, 0, sizeof(resp));
 
-    len_recv_msg = sizeof(final_list_buf);
-    if (read_packet(TRANSFER_INTERFACE, &cmd, &final_list_buf, &len_recv_msg) != MSG_OK) {
-        //print_error("Failed to receive interrogate response");
-        return -1;
-    }
+    // Build authenticated interrogate request
+    req.sender_id = HSM_ID;
+    req.ctr = replay_ctr_next_local();
+    get_request_nonce(req.nonce);
 
-    if (cmd != INTERROGATE_MSG) {
-        //print_error("Opcode mismatch");
-        return -1;
-    }
+    size_t aad_len = build_interrogate_request_aad(&req, aad, sizeof(aad));
+    gmac_compute_tag(...);
 
-    write_packet(CONTROL_INTERFACE, INTERROGATE_MSG, &final_list_buf, len_recv_msg);
+    if (get_request_nonce(req.nonce) != 0) return -1;
+
+    uint8_t req_aad[INTR_REQ_DOMAIN_LEN + 20];
+    size_t req_aad_len = build_interrogate_request_aad(&req, req_aad, sizeof(req_aad));
+    if (req_aad_len == 0) return -1;
+
+    if (gmac_compute_tag(GMAC_KEY, req.nonce, req_aad, req_aad_len, req.tag) != 0) return -1;
+
+    write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, &req, sizeof(req));
+
+    // Read authenticated interrogate response
+    len_recv_msg = sizeof(resp);
+    if (read_packet(TRANSFER_INTERFACE, &cmd, &resp, &len_recv_msg) != MSG_OK) return -1;
+
+    if (cmd != INTERROGATE_MSG) return -1;
+    if (len_recv_msg != sizeof(interrogate_response_t)) return -1;
+    if (resp.list.n_files > MAX_FILE_COUNT) return -1;
+
+    // Verify response GMAC
+    uint8_t expected_tag[GMAC_TAG_LEN];
+    uint8_t resp_aad[INTR_RESP_DOMAIN_LEN + 2 + 20 + GMAC_NONCE_LEN + sizeof(list_response_t)];
+    size_t resp_aad_len = build_interrogate_response_aad(&req, &resp, resp_aad, sizeof(resp_aad));
+    if (resp_aad_len == 0) return -1;
+
+    if (gmac_compute_tag(GMAC_KEY, resp.nonce, resp_aad, resp_aad_len, expected_tag) != 0) return -1;
+    if (!gmac_tag_eq_ct(expected_tag, resp.tag)) return -1;
+    if (!replay_ctr_accept(req.sender_id, req.ctr)) return -1;
+
+    // Optional but recommended: replay protect response
+    if (!nonce_accept_test(resp.responder_id, resp.nonce, GMAC_NONCE_LEN)) return -1;
+
+    // Forward only the list payload back to host (legacy host protocol preserved)
+    pkt_len_t host_len = (pkt_len_t)LIST_PKT_LEN(resp.list.n_files);
+    write_packet(CONTROL_INTERFACE, INTERROGATE_MSG, &resp.list, host_len);
     return 0;
 }
 
@@ -539,14 +658,50 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
     switch (cmd) {
         case INTERROGATE_MSG: {
-            memset(&file_list, 0, sizeof(file_list));
-            generate_list_files(&file_list);
+            interrogate_request_t req;
+            interrogate_response_t resp;
+            uint8_t expected_req_tag[GMAC_TAG_LEN];
+            uint8_t req_aad[INTR_REQ_DOMAIN_LEN + 2];
+            uint8_t resp_aad[INTR_RESP_DOMAIN_LEN + 2 + 2 + GMAC_NONCE_LEN + sizeof(list_response_t)];
+            size_t req_aad_len, resp_aad_len;
 
-            write_length = LIST_PKT_LEN(file_list.n_files);
-            write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, &file_list, write_length);
+            if (read_length != sizeof(interrogate_request_t)) return -1;
+
+            memset(&req, 0, sizeof(req));
+            memset(&resp, 0, sizeof(resp));
+            memcpy(&req, uart_buf, sizeof(req));
+
+            resp.responder_id = HSM_ID;
+            resp.ctr = replay_ctr_next_local();
+
+            // Verify interrogate request GMAC
+            req_aad_len = build_interrogate_request_aad(&req, req_aad, sizeof(req_aad));
+            if (req_aad_len == 0) return -1;
+
+            if (gmac_compute_tag(GMAC_KEY, req.nonce, req_aad, req_aad_len, expected_req_tag) != 0) return -1;
+            if (!gmac_tag_eq_ct(expected_req_tag, req.tag)) return -1;
+            if (!replay_ctr_accept(req.sender_id, req.ctr)) return -1;
+
+            // Replay protect request
+            if (!nonce_accept_test(req.sender_id, req.nonce, GMAC_NONCE_LEN)) return -1;
+
+            // Build list payload
+            resp.responder_id = HSM_ID;
+            memset(&resp.list, 0, sizeof(resp.list));
+            generate_list_files(&resp.list);
+
+            // Sign response
+            if (get_request_nonce(resp.nonce) != 0) return -1;
+
+            resp_aad_len = build_interrogate_response_aad(&req, &resp, resp_aad, sizeof(resp_aad));
+            if (resp_aad_len == 0) return -1;
+
+            if (gmac_compute_tag(GMAC_KEY, resp.nonce, resp_aad, resp_aad_len, resp.tag) != 0) return -1;
+
+            write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, &resp, sizeof(resp));
             break;
-        }
-
+            }
+        }   
         case RECEIVE_MSG: {
             receive_request_t req;
             uint8_t aad[2 + 2 + 1 + PERM_BLOB_MAX];
@@ -555,6 +710,9 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             memset(&req, 0, sizeof(req));
             memset(&recv_resp, 0, sizeof(recv_resp));
+
+            recv_resp.responder_id = HSM_ID;
+            recv_resp.ctr = replay_ctr_next_local();
 
             // For now require a full fixed-size receive_request_t packet
             if (read_length != sizeof(receive_request_t)) {
@@ -584,6 +742,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
                 //print_error("GMAC verify failed");
                 return -1;
             }
+            if (!replay_ctr_accept(req.sender_id, req.ctr)) return -1;
 
             // Replay protection after successful tag verify (prevents cache poisoning)
             if (!nonce_accept_test(req.sender_id, req.nonce, GMAC_NONCE_LEN)) {

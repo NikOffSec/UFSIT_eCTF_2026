@@ -93,6 +93,7 @@ typedef struct {
  */
 typedef struct {
     uint16_t sender_id;                 // stable per-firmware-image ID
+    uint32_t ctr;                 
     slot_t slot;
     uint8_t nonce[GMAC_NONCE_LEN];      // sender nonce / freshness value
     uint8_t perm_blob_len;              // actual bytes used in perm_blob
@@ -100,36 +101,16 @@ typedef struct {
     uint8_t tag[GMAC_TAG_LEN];          // GMAC over AAD (everything except tag)
 } receive_request_t;
 
-// Adjusted for gmac verification
-typedef struct {
-    uint8_t uuid[UUID_SIZE];
-    file_t file;
-
-    // GMAC response authentication
-    uint8_t nonce[GMAC_NONCE_LEN];   // 12-byte GMAC nonce
-    uint8_t tag[GMAC_TAG_LEN];       // 16-byte GMAC tag
-} receive_response_t;
-
 typedef struct {
     pin_t pin;
 } interrogate_command_t;
 
 typedef struct {
     uint16_t sender_id;
+    uint32_t ctr;
     uint8_t nonce[GMAC_NONCE_LEN];
     uint8_t tag[GMAC_TAG_LEN];
 } interrogate_request_t;
-
-typedef struct {
-    uint16_t responder_id;
-
-    // existing interrogate/list payload fields:
-    // e.g. count + entries[] (whatever your code already uses)
-    list_response_t list;   // replace with your actual type
-
-    uint8_t nonce[GMAC_NONCE_LEN];
-    uint8_t tag[GMAC_TAG_LEN];
-} interrogate_response_t;
 
 /**********************************************************
  ******************** RESPONSE STRUCTS ********************
@@ -144,6 +125,30 @@ typedef struct {
     char name[MAX_NAME_SIZE];
     uint8_t contents[MAX_CONTENTS_SIZE];
 } read_response_t;
+
+// Adjusted for gmac verification
+typedef struct {
+    uint16_t responder_id;
+    uint32_t ctr;
+    uint8_t uuid[UUID_SIZE];
+    file_t file;
+
+    // GMAC response authentication
+    uint8_t nonce[GMAC_NONCE_LEN];   // 12-byte GMAC nonce
+    uint8_t tag[GMAC_TAG_LEN];       // 16-byte GMAC tag
+} receive_response_t;
+
+typedef struct {
+    uint16_t responder_id;
+    uint32_t ctr;
+
+    // existing interrogate/list payload fields:
+    // e.g. count + entries[] (whatever your code already uses)
+    list_response_t list;   // replace with your actual type
+
+    uint8_t nonce[GMAC_NONCE_LEN];
+    uint8_t tag[GMAC_TAG_LEN];
+} interrogate_response_t;
 
 #pragma pack(pop) // Tells the compiler to resume padding struct members
 
