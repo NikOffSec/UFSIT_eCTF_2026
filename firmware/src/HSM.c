@@ -97,8 +97,48 @@ void crypto_example(void) {
 /** @brief Initializes peripherals for system boot.
  */
 void init() {
+
+    #include "ti_msp_dl_config.h"
+
+    static void tamper_bor_nmi_init(void) {
+        /*
+        * Choose a BOR threshold level that generates early BOR indication (NMI path),
+        * not immediate hard reset-only behavior. BOR1/2/3 are the "warning" levels;
+        * BOR0 is the hard BOR floor.
+        *
+        * Start with LEVEL_3 (most sensitive warning) for testing, then tune.
+        */
+        DL_SYSCTL_setBORThreshold(DL_SYSCTL_BOR_THRESHOLD_LEVEL_3);
+
+        /*
+        * This applies the threshold and clears prior BOR violation status indications.
+        */
+        DL_SYSCTL_activateBORThreshold();
+
+        /*
+        * Clear stale pending BOR NMI status before enabling handling logic.
+        */
+        DL_SYSCTL_clearNonMaskableInterruptStatus(DL_SYSCTL_NMI_BORLVL);
+    }
+
     // Initialize all of the hardware components
     SYSCFG_DL_init();
+
+    void init() {
+        SYSCFG_DL_init();
+
+        tamper_bor_nmi_init();
+
+        init_fs();
+
+        if (trng_init()) {
+            while (1) { }
+        }
+
+        if (timer_init()) {
+            while (1) { }
+        }
+    }
 
     init_fs();
 
@@ -128,6 +168,20 @@ int main(void) {
     // initialize the device
     init();
 
+    void main(void)
+    {
+    SYSCFG_DL_init();
+
+    tamper_latch_init_if_needed();
+
+    if (tamper_latch_is_tripped()) {
+        /* Restricted mode: no transfers, no secrets, blink LED forever */
+        enter_tamper_lock_mode();
+    }
+
+    /* normal init / command loop */
+    }
+
     // process commands forever
     while (1) {
 
@@ -141,6 +195,10 @@ int main(void) {
         // Fix buffer overflow from command line
         pkt_len = sizeof(uart_buf);
         result = read_packet(CONTROL_INTERFACE, &cmd, uart_buf, &pkt_len);
+        
+        if (tamper_latch_is_tripped()) {
+            enter_tamper_lock_mode();
+        }
 
         if (result != MSG_OK) {
             STATUS_LED_OFF();
