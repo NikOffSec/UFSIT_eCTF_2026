@@ -26,7 +26,6 @@
 #endif
 
 #define pkt_len_t uint16_t
-#define RECEIVE_RESPONSE_HASH_LEN 16
 
 #define GMAC_NONCE_LEN 12
 #define GMAC_TAG_LEN   16
@@ -101,18 +100,36 @@ typedef struct {
     uint8_t tag[GMAC_TAG_LEN];          // GMAC over AAD (everything except tag)
 } receive_request_t;
 
-// Keep response type only if current receive/listen implementation still uses it
+// Adjusted for gmac verification
 typedef struct {
     uint8_t uuid[UUID_SIZE];
-    uint32_t internal_random_number;
     file_t file;
-    uint8_t padding[4];
-    uint8_t hash[RECEIVE_RESPONSE_HASH_LEN];
+
+    // GMAC response authentication
+    uint8_t nonce[GMAC_NONCE_LEN];   // 12-byte GMAC nonce
+    uint8_t tag[GMAC_TAG_LEN];       // 16-byte GMAC tag
 } receive_response_t;
 
 typedef struct {
     pin_t pin;
 } interrogate_command_t;
+
+typedef struct {
+    uint16_t sender_id;
+    uint8_t nonce[GMAC_NONCE_LEN];
+    uint8_t tag[GMAC_TAG_LEN];
+} interrogate_request_t;
+
+typedef struct {
+    uint16_t responder_id;
+
+    // existing interrogate/list payload fields:
+    // e.g. count + entries[] (whatever your code already uses)
+    list_response_t list;   // replace with your actual type
+
+    uint8_t nonce[GMAC_NONCE_LEN];
+    uint8_t tag[GMAC_TAG_LEN];
+} interrogate_response_t;
 
 /**********************************************************
  ******************** RESPONSE STRUCTS ********************

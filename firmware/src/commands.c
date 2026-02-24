@@ -94,6 +94,67 @@ static size_t bounded_strnlen_local(const char *s, size_t max_len) {
     return i;
 }
 
+#define RX_RESP_DOMAIN "RXRESPv1"
+#define RX_RESP_DOMAIN_LEN 8
+
+static size_t build_receive_response_aad(const receive_request_t *req,
+                                         const receive_response_t *resp,
+                                         uint8_t *out, size_t out_cap) {
+    // AAD layout (explicit serialization):
+    // "RXRESPv1" |
+    // req.sender_id (2) |
+    // req.slot (2) |
+    // resp.uuid (16) |
+    // file.group_id (2) |
+    // file.contents_len (2) |
+    // file.name (32) |
+    // file.contents (contents_len)
+    //
+    // NOTE: resp.nonce is NOT included here because it's passed as GMAC nonce.
+
+    uint16_t contents_len = resp->file.contents_len;
+    if (contents_len > MAX_CONTENTS_SIZE) return 0;
+
+    size_t need = RX_RESP_DOMAIN_LEN
+                + 2u  // req.sender_id
+                + 2u  // req.slot
+                + UUID_SIZE
+                + 2u  // file.group_id
+                + 2u  // file.contents_len
+                + MAX_NAME_SIZE
+                + (size_t)contents_len;
+
+    if (out_cap < need) return 0;
+
+    size_t off = 0;
+
+    memcpy(&out[off], RX_RESP_DOMAIN, RX_RESP_DOMAIN_LEN);
+    off += RX_RESP_DOMAIN_LEN;
+
+    out[off++] = (uint8_t)(req->sender_id >> 8);
+    out[off++] = (uint8_t)(req->sender_id & 0xFF);
+
+    out[off++] = (uint8_t)(((uint16_t)req->slot) >> 8);
+    out[off++] = (uint8_t)(((uint16_t)req->slot) & 0xFF);
+
+    memcpy(&out[off], resp->uuid, UUID_SIZE);
+    off += UUID_SIZE;
+
+    out[off++] = (uint8_t)(resp->file.group_id >> 8);
+    out[off++] = (uint8_t)(resp->file.group_id & 0xFF);
+
+    out[off++] = (uint8_t)(contents_len >> 8);
+    out[off++] = (uint8_t)(contents_len & 0xFF);
+
+    memcpy(&out[off], resp->file.name, MAX_NAME_SIZE);
+    off += MAX_NAME_SIZE;
+
+    memcpy(&out[off], resp->file.contents, contents_len);
+    off += contents_len;
+
+    return off;
+}
+
 /** @brief List out the files on the system.
  *      To be utilized by list and interrogate
  *
@@ -314,6 +375,10 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
         return -1;
     }
 
+    if (pkt_len != sizeof(receive_command_t)) return -1;
+    if ((uint16_t)command->read_slot >= MAX_FILE_COUNT) return -1;
+    if ((uint16_t)command->write_slot >= MAX_FILE_COUNT) return -1;
+
     memset(&request, 0, sizeof(request));
     memset(&recv_resp, 0, sizeof(recv_resp));
 
@@ -347,33 +412,58 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
         return -1;
     }
 
-#ifdef ATTACK_FLIP_TAG_BIT
-    request.tag[0] ^= 0x01;
-    print_debug("[ATTACK] Flipped 1 bit in GMAC tag");
-#endif
+    #ifdef ATTACK_FLIP_TAG_BIT
+        request.tag[0] ^= 0x01;
+        print_debug("[ATTACK] Flipped 1 bit in GMAC tag");
+    #endif
 
-#ifdef ATTACK_SPOOF_SENDER_ID
-    request.sender_id ^= 0x0001;
-    print_debug("[ATTACK] Spoofed sender_id after GMAC generation");
-#endif
+    #ifdef ATTACK_SPOOF_SENDER_ID
+        request.sender_id ^= 0x0001;
+        print_debug("[ATTACK] Spoofed sender_id after GMAC generation");
+    #endif
 
-#ifdef ATTACK_TAMPER_SLOT
-    request.slot ^= 0x01;
-    print_debug("[ATTACK] Tampered slot after GMAC generation");
-#endif
+    #ifdef ATTACK_TAMPER_SLOT
+        request.slot ^= 0x01;
+        print_debug("[ATTACK] Tampered slot after GMAC generation");
+    #endif
 
-    // Send authenticated request
-    write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&request, sizeof(receive_request_t));
+        // Send authenticated request
+        write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&request, sizeof(receive_request_t));
 
-#ifdef ATTACK_REPLAY_DUPLICATE_SEND
-    print_debug("[ATTACK] Re-sending exact same RECEIVE packet for replay test");
-    write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&request, sizeof(receive_request_t));
-#endif
+    #ifdef ATTACK_REPLAY_DUPLICATE_SEND
+        print_debug("[ATTACK] Re-sending exact same RECEIVE packet for replay test");
+        write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&request, sizeof(receive_request_t));
+    #endif
 
-    // Receive file response (legacy response struct retained for compatibility)
-    len_recv_msg = sizeof(recv_resp);
-    if (read_packet(TRANSFER_INTERFACE, &cmd, &recv_resp, &len_recv_msg) != MSG_OK) {
-        //print_error("Failed to receive response");
+        // Receive file response (legacy response struct retained for compatibility)
+        len_recv_msg = sizeof(recv_resp);
+        if (len_recv_msg != sizeof(receive_response_t)) {
+        //print_error("Receive response bad length");
+        return -1;
+    }
+
+    if (recv_resp.file.contents_len > MAX_CONTENTS_SIZE) {
+        //print_error("Receive response file too large");
+        return -1;
+    }
+
+    // Build expected response AAD bound to the original request we sent
+    uint8_t resp_aad[RX_RESP_DOMAIN_LEN + 2 + 2 + UUID_SIZE + 2 + 2 + MAX_NAME_SIZE + MAX_CONTENTS_SIZE];
+    uint8_t expected_resp_tag[GMAC_TAG_LEN];
+
+    size_t resp_aad_len = build_receive_response_aad(&request, &recv_resp, resp_aad, sizeof(resp_aad));
+    if (resp_aad_len == 0) {
+        //print_error("Receive response AAD build failed");
+        return -1;
+    }
+
+    if (gmac_compute_tag(GMAC_KEY, recv_resp.nonce, resp_aad, resp_aad_len, expected_resp_tag) != 0) {
+        //print_error("Receive response GMAC compute failed");
+        return -1;
+    }
+
+    if (!gmac_tag_eq_ct(expected_resp_tag, recv_resp.tag)) {
+        //print_error("Receive response GMAC verify failed");
         return -1;
     }
 
@@ -531,16 +621,29 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             memcpy(&recv_resp.uuid, &metadata->uuid, UUID_SIZE);
 
-            // Retained field for compatibility with existing struct
-            recv_resp.internal_random_number = 0;
+            // Generate response GMAC nonce
+            if (get_request_nonce(recv_resp.nonce) != 0) {
+                //print_error("Response nonce generation failed");
+                return -1;
+            }
 
-            // NOTE: Response is not yet GMAC-protected here.
-            // This gets the GMAC request path working first.
+            // Build response AAD
+            uint8_t resp_aad[RX_RESP_DOMAIN_LEN + 2 + 2 + UUID_SIZE + 2 + 2 + MAX_NAME_SIZE + MAX_CONTENTS_SIZE];
+            size_t resp_aad_len = build_receive_response_aad(&req, &recv_resp, resp_aad, sizeof(resp_aad));
+            if (resp_aad_len == 0) {
+                //print_error("Response AAD build failed");
+                return -1;
+            }
+
+            // Compute response GMAC tag
+            if (gmac_compute_tag(GMAC_KEY, recv_resp.nonce, resp_aad, resp_aad_len, recv_resp.tag) != 0) {
+                //print_error("Response GMAC generation failed");
+                return -1;
+            }
+
             write_length = sizeof(receive_response_t);
             write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, &recv_resp, write_length);
-            break;
         }
-
         default:
             //print_error("listen: unsupported transfer opcode");
             return -1;
