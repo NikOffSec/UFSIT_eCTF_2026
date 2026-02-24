@@ -35,9 +35,9 @@
 typedef unsigned char pin_t[6];
 
 // can support the largest struct size message size of the device for in place encryption/decryption
-#define MAX_COMMAND_SIZE 8272
+//#define MAX_COMMAND_SIZE 8272
 //TODO: THIS WILL NOT WORK WITH LARGER MESSAGES; TEMP FIX BECAUSE WE WERE OVERFLOWING THE STACK
-extern uint8_t tmp_command_buffer[100];
+//extern uint8_t tmp_command_buffer[100];
 
 #define MAX_MSG_SIZE sizeof(write_command_t)
 
