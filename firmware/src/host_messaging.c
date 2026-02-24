@@ -199,7 +199,7 @@ int read_packet(int uart_id, msg_type_t* cmd, void *buf, uint16_t *len) {
     print_hex_debug(len,2);
 
     print_debug("Message length (hex):");
-    print_hex_debug(header.len,2);
+    print_hex_debug(&header.len,2);
 
     if (len != NULL) {
         if (*len && header.len > *len) {
