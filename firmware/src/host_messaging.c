@@ -201,13 +201,12 @@ int read_packet(int uart_id, msg_type_t* cmd, void *buf, uint16_t *len) {
     print_debug("Message length (hex):");
     print_hex_debug(&header.len,2);
 
-    if (len != NULL) {
-        if (*len && header.len > *len) {
-            *len = 0;
-            return MSG_BAD_LEN;
-        }
+    if(len == NULL)
+        return MSG_BAD_LEN;
 
-        *len = header.len;
+    if (header.len > *len) {
+        *len = 0;
+        return MSG_BAD_LEN;
     }
 
     if (header.cmd != ACK_MSG) {
