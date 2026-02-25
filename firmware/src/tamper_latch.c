@@ -77,12 +77,3 @@ void tamper_latch_clear(void)
 {
     tl_write_record(TL_FLAG_CLEAR);
 }
-
-void NMI_Handler(void)
-{
-    // Optionally inspect NMI cause here first (BOR-related cause only)
-    tamper_latch_trip();
-
-    // Immediately fail closed
-    enter_tamper_lock_mode();
-}

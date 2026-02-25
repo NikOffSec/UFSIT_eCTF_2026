@@ -31,7 +31,10 @@ OBJECTS = $(BUILDDIR)/HSM.so \
     $(BUILDDIR)/commands.so \
     $(BUILDDIR)/gmac.so \
     $(BUILDDIR)/simple_trng.so \
-    $(BUILDDIR)/simple_timer.so
+    $(BUILDDIR)/simple_timer.so \
+    $(BUILDDIR)/tamper_latch.so \
+    $(BUILDDIR)/tamper_lock.so \
+    $(BUILDDIR)/tamper_nmi.so 
 
 # -----------------------------------------------------------------------------
 # Optional original crypto example (kept intact)
