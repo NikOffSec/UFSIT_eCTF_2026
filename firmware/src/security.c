@@ -220,9 +220,6 @@ bool check_pin(unsigned char *pin) {
 
     const uint8_t *in = (const uint8_t *)pin;
 
-    // REMOVE IF WE GO OVERTIME
-    random_delay();
-
     // Optional strict input validation for 6-char lowercase hex PINs.
     // If caller may pass uppercase, either normalize earlier or accept A-F here.
     for (size_t i = 0; i < PIN_LENGTH; i++) {
@@ -246,11 +243,14 @@ bool check_pin(unsigned char *pin) {
     uint8_t t1[GMAC_TAG_LEN];
     uint8_t t2[GMAC_TAG_LEN];
 
+    // REMOVE IF WE GO OVERTIME
+    random_delay();
+
     int rc1 = compute_pin_verifier_tag(pin_norm, t1);
     int rc2 = compute_pin_verifier_tag(pin_norm, t2);
 
     // REMOVE IF WE GO OVERTIME
-    random_delay();
+    //random_delay();
 
     // Redundant checks to make single-fault bypass harder
     uint8_t ok1 = (uint8_t)((rc1 == 0) && gmac_tag_eq_ct(t1, HSM_PIN_TAG));
