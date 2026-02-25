@@ -100,7 +100,7 @@ static int compute_pin_verifier_tag(const uint8_t *pin, uint8_t out_tag[GMAC_TAG
 void random_delay() {
     volatile uint8_t delay = trng_generate();
     for(; delay != 0; delay--) {
-        print("Delay path hit");
+        print_debug("Delay path hit");
     }
 }
 
