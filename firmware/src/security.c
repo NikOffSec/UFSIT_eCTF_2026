@@ -30,7 +30,7 @@
 
 typedef struct {
     bool used;
-    uint16_t sender_id;
+    uint16_t sender_id; 
     uint8_t nonce[GMAC_NONCE_LEN];
 } nonce_entry_t;
 

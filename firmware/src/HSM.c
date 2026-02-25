@@ -25,9 +25,13 @@
 #include "ti_msp_dl_config.h"
 #include "status_led.h"
 #include "simple_uart.h"
-
 #include "simple_trng.h"
 #include "simple_timer.h"
+
+/* Tamper / brownout latch support */
+#include "tamper_latch.h"
+#include "tamper_lock.h"
+#include "tamper_nmi.h"
 
 /* Code between this #ifdef and the subsequent #endif will
  * be ignored by the compiler if CRYPTO_EXAMPLE is not set in
@@ -51,24 +55,30 @@ static unsigned char uart_buf[MAX_MSG_SIZE];
  ********************* CORE FUNCTIONS *********************
  **********************************************************/
 
-/** @brief Initializes peripherals for system boot.
- */
-void init() {
-    // Initialize all of the hardware components
+/** @brief Initializes peripherals for system boot. */
+void init(void)
+{
     SYSCFG_DL_init();
+
+    /* Re-apply BOR warning threshold after SysConfig sets BOR0 */
+    tamper_bor_nmi_init();
+
+    /* Initialize/read battery-backed latch */
+    tamper_latch_init_if_needed();
+
+    /* Fail closed if a prior brownout tamper event latched */
+    if (tamper_latch_is_tripped()) {
+        enter_tamper_lock_mode();  // never returns
+    }
 
     init_fs();
 
     if (trng_init()) {
-        while (1) {
-            //print_error("ERROR: TRNG CAN'T INIT");
-        }
+        while (1) { }
     }
 
     if (timer_init()) {
-        while (1) {
-            //print_error("ERROR: COUNTER CAN'T INIT");
-        }
+        while (1) { }
     }
 }
 
@@ -76,28 +86,34 @@ void init() {
  *********************** MAIN LOOP ************************
  **********************************************************/
 
-int main(void) {
+int main(void)
+{
     char output_buf[128] = {0};
     msg_type_t cmd;
     int result;
     uint16_t pkt_len;
 
-    // initialize the device
+    /* initialize the device */
     init();
 
-    // process commands forever
+    /* process commands forever */
     while (1) {
+        /* Fail closed if tamper latch trips during runtime */
+        if (tamper_latch_is_tripped()) {
+            enter_tamper_lock_mode();  // never returns
+        }
 
-        // Clear the input buffer so that sensitive data from a past session can't be yoinked!
+        /* Clear input buffer so sensitive data from a past session isn't retained */
         memset(uart_buf, 0, sizeof(uart_buf));
 
         print_debug("Ready\n");
-
         STATUS_LED_ON();
 
-        // Fix buffer overflow from command line
+        /* Bound packet length to input buffer size */
         pkt_len = sizeof(uart_buf);
-        result = read_packet(CONTROL_INTERFACE, &cmd, &uart_buf, &pkt_len);
+
+        /* IMPORTANT: pass uart_buf (not &uart_buf) */
+        result = read_packet(CONTROL_INTERFACE, &cmd, uart_buf, &pkt_len);
 
         if (result != MSG_OK) {
             STATUS_LED_OFF();
@@ -118,55 +134,54 @@ int main(void) {
             continue;
         }
 
-        // Handle the requested command
+        /* Check tamper again after receiving a packet (defense-in-depth) */
+        if (tamper_latch_is_tripped()) {
+            enter_tamper_lock_mode();  // never returns
+        }
+
+        /* Handle the requested command */
         switch (cmd) {
 
-        // Handle list command
         case LIST_MSG:
 #ifdef CRYPTO_EXAMPLE
-            // Run the crypto example
-            // TODO: Remove this from your design before competition submission
+            /* Run the crypto example
+             * TODO: Remove this from your design before competition submission */
             crypto_example();
 #endif  // CRYPTO_EXAMPLE
             STATUS_LED_OFF();
             list(pkt_len, &uart_buf);
             break;
 
-        // Handle read command
         case READ_MSG:
             STATUS_LED_OFF();
             read(pkt_len, &uart_buf);
             break;
 
-        // Handle write command
         case WRITE_MSG:
             STATUS_LED_OFF();
             write(pkt_len, &uart_buf);
             break;
 
-        // Handle receive command
         case RECEIVE_MSG:
             STATUS_LED_OFF();
             receive(pkt_len, &uart_buf);
             break;
 
-        // Handle interrogate command
         case INTERROGATE_MSG:
             STATUS_LED_OFF();
             interrogate(pkt_len, &uart_buf);
             break;
 
-        // Handle listen command
         case LISTEN_MSG:
             STATUS_LED_OFF();
             listen(pkt_len, &uart_buf);
             break;
 
-        // Handle bad command
         default:
             STATUS_LED_OFF();
-            sprintf(output_buf, "Invalid Command: %c\n", cmd);
-            //print_error(output_buf);
+            /* Cast to int for safer formatting regardless of msg_type_t underlying type */
+            snprintf(output_buf, sizeof(output_buf), "Invalid Command: 0x%02X\n", (unsigned int)cmd);
+            print_error(output_buf);
             break;
         }
     }
