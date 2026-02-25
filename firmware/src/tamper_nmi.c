@@ -1,4 +1,3 @@
-#include <ti/driverlib/dl_sysctl.h>
 #include "ti_msp_dl_config.h"
 #include "tamper_latch.h"
 #include "tamper_lock.h"
