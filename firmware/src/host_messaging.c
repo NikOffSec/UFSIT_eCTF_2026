@@ -204,12 +204,16 @@ int read_packet(int uart_id, msg_type_t* cmd, void *buf, uint16_t *len) {
     if(len == NULL)
         return MSG_BAD_LEN;
 
+    // Send ACK for the header before length validation to prevent deadlock
+    if (header.cmd != ACK_MSG) {
+        write_ack(uart_id);  // ACK the header
+    }
+
     if (header.len > *len) {
         return MSG_BAD_LEN;
     }
 
     if (header.cmd != ACK_MSG) {
-        write_ack(uart_id);  // ACK the header
         if (header.len && buf != NULL) {
             if (read_bytes(uart_id, buf, header.len) != MSG_OK) {
                 return MSG_NO_ACK;
