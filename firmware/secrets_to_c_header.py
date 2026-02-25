@@ -328,4 +328,4 @@ if __name__ == "__main__":
 
     args = parse_args()
     perms = PermissionList.deserialize(args.permissions)
-    secrets_to_c_header(perms, "firmware/inc/", args.hsm_pin, args.secrets.read())
+    secrets_to_c_header(perms, "./inc/", args.hsm_pin, args.secrets.read())
