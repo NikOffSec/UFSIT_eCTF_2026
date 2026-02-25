@@ -149,32 +149,32 @@ int main(void)
             crypto_example();
 #endif  // CRYPTO_EXAMPLE
             STATUS_LED_OFF();
-            list(pkt_len, uart_buf);
+            list(pkt_len, &uart_buf);
             break;
 
         case READ_MSG:
             STATUS_LED_OFF();
-            read(pkt_len, uart_buf);
+            read(pkt_len, &uart_buf);
             break;
 
         case WRITE_MSG:
             STATUS_LED_OFF();
-            write(pkt_len, uart_buf);
+            write(pkt_len, &uart_buf);
             break;
 
         case RECEIVE_MSG:
             STATUS_LED_OFF();
-            receive(pkt_len, uart_buf);
+            receive(pkt_len, &uart_buf);
             break;
 
         case INTERROGATE_MSG:
             STATUS_LED_OFF();
-            interrogate(pkt_len, uart_buf);
+            interrogate(pkt_len, &uart_buf);
             break;
 
         case LISTEN_MSG:
             STATUS_LED_OFF();
-            listen(pkt_len, uart_buf);
+            listen(pkt_len, &uart_buf);
             break;
 
         default:
