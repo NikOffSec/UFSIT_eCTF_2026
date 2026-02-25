@@ -38,6 +38,9 @@ uint32_t replay_ctr_next_local(void);
 
 int trng_get_bytes(uint8_t *out, size_t len);
 
+// A short random delay to avoid voltage glitching attacks
+void random_delay();
+
 bool nonce_accept(uint16_t sender_id, const uint8_t *nonce, size_t nonce_len);
 
 /** @brief Validate a pin against the HSM's pin
