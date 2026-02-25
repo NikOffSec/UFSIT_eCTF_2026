@@ -583,53 +583,10 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
     msg_type_t cmd;
     uint16_t len_recv_msg;
 
-    if (!check_pin(command->pin)) {
-        print_error("Invalid pin");
-        timer_wait_5s();
-        return -1;
-    }
-
     memset(&req, 0, sizeof(req));
     memset(&resp, 0, sizeof(resp));
 
-    // Build authenticated interrogate request
-    req.sender_id = HSM_ID;
-    req.ctr = replay_ctr_next_local();
-
-    if (get_request_nonce(req.nonce) != 0) return -1;
-
-    uint8_t req_aad[INTR_REQ_DOMAIN_LEN + 20];
-    size_t req_aad_len = build_interrogate_request_aad(&req, req_aad, sizeof(req_aad));
-    if (req_aad_len == 0) return -1;
-
-    if (gmac_compute_tag(GMAC_KEY, req.nonce, req_aad, req_aad_len, req.tag) != 0) return -1;
-
     write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, &req, sizeof(req));
-
-    // Read authenticated interrogate response
-    len_recv_msg = sizeof(resp);
-    if (read_packet(TRANSFER_INTERFACE, &cmd, &resp, &len_recv_msg) != MSG_OK) return -1;
-
-    if (cmd != INTERROGATE_MSG) return -1;
-    if (len_recv_msg != sizeof(interrogate_response_t)) return -1;
-    if (resp.list.n_files > MAX_FILE_COUNT) return -1;
-
-    // Verify response GMAC
-    uint8_t expected_tag[GMAC_TAG_LEN];
-    uint8_t resp_aad[INTR_RESP_DOMAIN_LEN + 2 + 20 + GMAC_NONCE_LEN + sizeof(list_response_t)];
-    size_t resp_aad_len = build_interrogate_response_aad(&req, &resp, resp_aad, sizeof(resp_aad));
-    if (resp_aad_len == 0) return -1;
-
-    if (gmac_compute_tag(GMAC_KEY, resp.nonce, resp_aad, resp_aad_len, expected_tag) != 0) return -1;
-    if (!gmac_tag_eq_ct(expected_tag, resp.tag)) return -1;
-    if (!replay_ctr_accept(resp.responder_id, resp.ctr)) return -1;
-
-    // Optional but recommended: replay protect response
-    if (!nonce_accept_test(resp.responder_id, resp.nonce, GMAC_NONCE_LEN)) return -1;
-
-    // Forward only the list payload back to host (legacy host protocol preserved)
-    pkt_len_t host_len = (pkt_len_t)LIST_PKT_LEN(resp.list.n_files);
-    write_packet(CONTROL_INTERFACE, INTERROGATE_MSG, &resp.list, host_len);
     return 0;
 }
 

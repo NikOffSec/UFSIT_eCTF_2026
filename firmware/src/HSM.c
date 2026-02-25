@@ -45,7 +45,7 @@
  ************************ GLOBALS *************************
  **********************************************************/
 
-static unsigned char uart_buf[MAX_MSG_SIZE];
+static unsigned char uart_buf[10000];
 
 /**********************************************************
  ********************* CORE FUNCTIONS *********************
@@ -95,9 +95,11 @@ int main(void) {
 
         STATUS_LED_ON();
 
+        uint32_t len = 0;
+
         // Fix buffer overflow from command line
-        pkt_len = sizeof(uart_buf);
-        result = read_packet(CONTROL_INTERFACE, &cmd, &uart_buf, &pkt_len);
+        result = read_packet(CONTROL_INTERFACE, &cmd, &len, sizeof(uint32_t));
+        result = read_packet(CONTROL_INTERFACE, &cmd, &uart_buf, sizeof(uint32_t));
 
         if (result != MSG_OK) {
             STATUS_LED_OFF();
@@ -121,27 +123,31 @@ int main(void) {
         // Handle the requested command
         switch (cmd) {
 
-        // Handle list command
-        case LIST_MSG:
-#ifdef CRYPTO_EXAMPLE
-            // Run the crypto example
-            // TODO: Remove this from your design before competition submission
-            crypto_example();
-#endif  // CRYPTO_EXAMPLE
+        // Handle write command
+        case WRITE_MSG:
             STATUS_LED_OFF();
-            list(pkt_len, &uart_buf);
+            for (int i = 0; i < len; i++) {
+                uart_writebyte(uart_id, ((uint8_t *)&uart_buf)[i]);
+            }
+
+            fflush(stdout);
             break;
 
         // Handle read command
         case READ_MSG:
             STATUS_LED_OFF();
-            read(pkt_len, &uart_buf);
+            listen(pkt_len, &uart_buf);
+            for (i = 0; i < len; i++) {
+                ((uint8_t *)buf)[i] = result;
+            }
             break;
 
-        // Handle write command
-        case WRITE_MSG:
+
+
+        // Handle list command
+        case LIST_MSG:
             STATUS_LED_OFF();
-            write(pkt_len, &uart_buf);
+            list(pkt_len, &uart_buf);
             break;
 
         // Handle receive command

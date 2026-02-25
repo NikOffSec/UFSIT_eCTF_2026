@@ -142,13 +142,9 @@ int write_hex(int uart_id, msg_type_t type, const void *buf, size_t len) {
  *
  *  @return MSG_OK on success, else other msg_status_t
 */
-int write_packet(int uart_id, msg_type_t type, const void *buf, uint16_t len) {
+int write_packet(const void *buf, uint16_t len) {
     msg_header_t hdr;
     int result;
-
-    hdr.magic = MSG_MAGIC;
-    hdr.cmd = type;
-    hdr.len = len;
 
     result = write_bytes(uart_id, &hdr, MSG_HEADER_SIZE, false);
 
