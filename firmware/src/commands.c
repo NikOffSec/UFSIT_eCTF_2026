@@ -712,65 +712,65 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             // For now require a full fixed-size receive_request_t packet
             if (read_length != sizeof(receive_request_t)) {
-                //print_error("RECEIVE request bad length");
+                print_error("RECEIVE request bad length");
                 return -1;
             }
 
             memcpy(&req, uart_buf, sizeof(req));
 
             if (req.perm_blob_len > PERM_BLOB_MAX || (req.perm_blob_len % 3u) != 0u) {
-                //print_error("Invalid permission blob length");
+                print_error("Invalid permission blob length");
                 return -1;
             }
 
             aad_len = build_receive_request_aad(&req, aad, sizeof(aad));
             if (aad_len == 0) {
-                //print_error("AAD build failed");
+                print_error("AAD build failed");
                 return -1;
             }
 
             if (gmac_compute_tag(GMAC_KEY, req.nonce, aad, aad_len, expected_tag) != 0) {
-                //print_error("GMAC compute failed");
+                print_error("GMAC compute failed");
                 return -1;
             }
 
             if (!gmac_tag_eq_ct(expected_tag, req.tag)) {
-                //print_error("GMAC verify failed");
+                print_error("GMAC verify failed");
                 return -1;
             }
             if (!replay_ctr_accept(req.sender_id, req.ctr)) return -1;
 
             // Replay protection after successful tag verify (prevents cache poisoning)
             if (!nonce_accept_test(req.sender_id, req.nonce, GMAC_NONCE_LEN)) {
-                //print_error("Replay detected");
+                print_error("Replay detected");
                 return -1;
             }
 
             if ((uint16_t)req.slot >= MAX_FILE_COUNT) {
-                //print_error("Invalid slot");
+                print_error("Invalid slot");
                 return -1;
             }
 
             if (read_file(req.slot, &recv_resp.file) < 0) {
-                //print_error("Failed to read file");
+                print_error("Failed to read file");
                 return -1;
             }
 
             // Sender-side local policy: this board must be allowed to transfer this group
             if (!validate_permission(recv_resp.file.group_id, PERM_RECEIVE)) {
-                //print_error("Local policy denies transfer for file group");
+                print_error("Local policy denies transfer for file group");
                 return -1;
             }
 
             // Requester-side claimed perms (authenticated by GMAC)
             if (!requester_has_receive_perm_for_group(&req, recv_resp.file.group_id)) {
-                //print_error("Requester lacks RECEIVE permission for file group");
+                print_error("Requester lacks RECEIVE permission for file group");
                 return -1;
             }
 
             metadata = get_file_metadata(req.slot);
             if (metadata == NULL) {
-                //print_error("Getting metadata failed");
+                print_error("Getting metadata failed");
                 return -1;
             }
 
@@ -778,7 +778,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             // Generate response GMAC nonce
             if (get_request_nonce(recv_resp.nonce) != 0) {
-                //print_error("Response nonce generation failed");
+                print_error("Response nonce generation failed");
                 return -1;
             }
 
@@ -786,13 +786,13 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             uint8_t resp_aad[RX_RESP_DOMAIN_LEN + 2 + 2 + 4 + 2 + GMAC_NONCE_LEN + UUID_SIZE + 2 + 2 + MAX_NAME_SIZE + MAX_CONTENTS_SIZE];
             size_t resp_aad_len = build_receive_response_aad(&req, &recv_resp, resp_aad, sizeof(resp_aad));
             if (resp_aad_len == 0) {
-                //print_error("Response AAD build failed");
+                print_error("Response AAD build failed");
                 return -1;
             }
 
             // Compute response GMAC tag
             if (gmac_compute_tag(GMAC_KEY, recv_resp.nonce, resp_aad, resp_aad_len, recv_resp.tag) != 0) {
-                //print_error("Response GMAC generation failed");
+                print_error("Response GMAC generation failed");
                 return -1;
             }
 
@@ -801,7 +801,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             break;
         }
         default:
-            //print_error("listen: unsupported transfer opcode");
+            print_error("listen: unsupported transfer opcode");
             return -1;
     }
 
