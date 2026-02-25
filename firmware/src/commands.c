@@ -479,13 +479,13 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     size_t perm_blob_len = pack_permissions_sorted(
         global_permissions, MAX_PERMS, request.perm_blob, sizeof(request.perm_blob));
     if (perm_blob_len == 0 && MAX_PERMS > 0) {
-        //print_error("Packing permissions failed");
+        print_error("Packing permissions failed");
         return -1;
     }
     request.perm_blob_len = (uint8_t)perm_blob_len;
 
     if (get_request_nonce(request.nonce) != 0) {
-        //print_error("Nonce generation failed");
+        print_error("Nonce generation failed");
         return -1;
     }
 
@@ -494,12 +494,12 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     request.ctr = replay_ctr_next_local();
     size_t aad_len = build_receive_request_aad(&request, aad, sizeof(aad));
     if (aad_len == 0) {
-        //print_error("AAD build failed");
+        print_error("AAD build failed");
         return -1;
     }
 
     if (gmac_compute_tag(GMAC_KEY, request.nonce, aad, aad_len, request.tag) != 0) {
-        //print_error("GMAC tag generation failed");
+        print_error("GMAC tag generation failed");
         return -1;
     }
 
@@ -534,7 +534,7 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     if (len_recv_msg != sizeof(receive_response_t)) return -1;
 
     if (recv_resp.file.contents_len > MAX_CONTENTS_SIZE) {
-        //print_error("Receive response file too large");
+        print_error("Receive response file too large");
         return -1;
     }
 
@@ -544,28 +544,28 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
 
     size_t resp_aad_len = build_receive_response_aad(&request, &recv_resp, resp_aad, sizeof(resp_aad));
     if (resp_aad_len == 0) {
-        //print_error("Receive response AAD build failed");
+        print_error("Receive response AAD build failed");
         return -1;
     }
 
     if (gmac_compute_tag(GMAC_KEY, recv_resp.nonce, resp_aad, resp_aad_len, expected_resp_tag) != 0) {
-        //print_error("Receive response GMAC compute failed");
+        print_error("Receive response GMAC compute failed");
         return -1;
     }
 
     if (!gmac_tag_eq_ct(expected_resp_tag, recv_resp.tag)) {
-        //print_error("Receive response GMAC verify failed");
+        print_error("Receive response GMAC verify failed");
         return -1;
     }
     if (!replay_ctr_accept(recv_resp.responder_id, recv_resp.ctr)) return -1;
 
     if (cmd != RECEIVE_MSG) {
-        //print_error("Opcode mismatch");
+        print_error("Opcode mismatch");
         return -1;
     }
 
     if (write_file(command->write_slot, &recv_resp.file, recv_resp.uuid) < 0) {
-        //print_error("Writing received file failed");
+        print_error("Writing received file failed");
         return -1;
     }
 
@@ -674,6 +674,8 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             // Verify interrogate request GMAC
             req_aad_len = build_interrogate_request_aad(&req, req_aad, sizeof(req_aad));
             if (req_aad_len == 0) return -1;
+
+            print_debug("got here");
 
             if (gmac_compute_tag(GMAC_KEY, req.nonce, req_aad, req_aad_len, expected_req_tag) != 0) return -1;
             if (!gmac_tag_eq_ct(expected_req_tag, req.tag)) return -1;
