@@ -459,6 +459,8 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     msg_type_t cmd;
     uint16_t len_recv_msg;
 
+    print_debug("Recv called and running");
+
     if (!check_pin(command->pin)) {
         print_error("Invalid pin");
         timer_wait_5s();
