@@ -99,9 +99,9 @@ static int compute_pin_verifier_tag(const uint8_t *pin, uint8_t out_tag[GMAC_TAG
 //void __attribute__((optimize("O0"))) random_delay() {
 void random_delay() {
     volatile uint8_t delay = trng_generate();
-    for(; delay != 0; delay--) {
+    for(; delay != 0; delay--); /*{
         print_debug("Delay path hit");
-    }
+    }*/
 }
 
 
@@ -220,6 +220,7 @@ bool check_pin(unsigned char *pin) {
 
     const uint8_t *in = (const uint8_t *)pin;
 
+    // REMOVE IF WE GO OVERTIME
     random_delay();
 
     // Optional strict input validation for 6-char lowercase hex PINs.
@@ -248,6 +249,7 @@ bool check_pin(unsigned char *pin) {
     int rc1 = compute_pin_verifier_tag(pin_norm, t1);
     int rc2 = compute_pin_verifier_tag(pin_norm, t2);
 
+    // REMOVE IF WE GO OVERTIME
     random_delay();
 
     // Redundant checks to make single-fault bypass harder
