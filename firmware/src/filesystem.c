@@ -57,8 +57,7 @@ int create_file(
     group_id_t group_id,
     char *name,
     uint16_t contents_len,
-    uint8_t *contents,
-    uint16_t uart_pkt_len
+    uint8_t *contents
 ) {
 
     
