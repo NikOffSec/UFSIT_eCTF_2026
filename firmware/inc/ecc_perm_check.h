@@ -1,3 +1,5 @@
+#ifndef ECC_PERM_H
+#define ECC_PERM_H
 
 #define PROOF_SIZE 16
 
@@ -8,13 +10,16 @@ struct group_key_pair {
 };
 
 
-int demonstraite_permission(uint16_t group, uint8_t *proof);
+int demonstraite_permission(uint32_t group, uint8_t *proof, uint8_t *proof_signature);
 
-
-int check_permission(uint16_t group, uint8_t *original_proof, uint8_t *provided_signature_bytes);
+int check_permission(uint32_t group, uint8_t *original_proof_bytes, uint8_t *provided_signature);
 
 /*
 Generate the proof to send to the other HSM
+This is just random bytes of PROOF_SIZE
 */
 int generate_proof(uint8_t *proof);
 
+
+
+#endif // ECC_PERM_H

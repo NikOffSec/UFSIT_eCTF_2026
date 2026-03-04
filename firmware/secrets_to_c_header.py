@@ -298,9 +298,12 @@ def secrets_to_c_header(
                         f"{{{_hex_to_c_array(priv_hex)}}};\n\n"
                     )
                     break
+        f.write("\n")
+
+        f.write(f"#define PERSONAL_GROUP_COUNT {len(permissions)}\n\n")
 
         # Write all of the group key pairs for the personal HSM, this includes public and private keys
-        f.write("static const struct group_key_pair personal_key_pairs[DEPLOYMENT_GROUP_COUNT] = {\n")
+        f.write("static const struct group_key_pair personal_key_pairs[PERSONAL_GROUP_COUNT] = {\n")
         for perm in permissions:
             # if a group does not have the recieve perm don't give it a private key in it's firmware only public
             if perm.receive == True:

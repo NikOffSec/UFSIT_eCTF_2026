@@ -28,6 +28,8 @@
 #include "simple_trng.h"
 #include "simple_timer.h"
 
+#include "ecc_perm_check.h"
+
 /* Tamper / brownout latch support */
 #include "tamper_latch.h"
 #include "tamper_lock.h"
@@ -50,6 +52,8 @@
  **********************************************************/
 
 static unsigned char uart_buf[MAX_MSG_SIZE];
+
+extern int demonstraite_permission(uint32_t group, uint8_t *proof, uint8_t *proof_signature);
 
 /**********************************************************
  ********************* CORE FUNCTIONS *********************
@@ -148,6 +152,17 @@ int main(void)
              * TODO: Remove this from your design before competition submission */
             crypto_example();
 #endif  // CRYPTO_EXAMPLE
+
+            uint8_t proof[16] = {0xaa};
+            uint8_t sig[64] = {0};
+            memset(sig, 0, 64);
+            int r = demonstraite_permission(0x1234, proof, sig);
+
+            if (r != 0)
+                print_error("Perm check error!");
+
+            
+
             STATUS_LED_OFF();
             list(pkt_len, &uart_buf);
             break;
