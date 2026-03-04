@@ -23,6 +23,9 @@
 #define WOLFSSL_AES_DIRECT
 #define WOLFSSL_AESGCM
 
+/* ECC Support */
+#define HAVE_ED25519
+
 /* Disable algorithms you don't need */
 #define NO_RSA
 #define NO_DH
