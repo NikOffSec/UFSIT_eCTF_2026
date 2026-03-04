@@ -2,7 +2,7 @@
 #define PROOF_SIZE 16
 
 struct group_key_pair {
-    const uint16_t group;
+    const uint32_t group;
     const uint8_t *public;
     const uint8_t *private;
 };

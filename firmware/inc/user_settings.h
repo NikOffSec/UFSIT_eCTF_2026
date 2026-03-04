@@ -25,6 +25,7 @@
 
 /* ECC Support */
 #define HAVE_ED25519
+#define WOLFSSL_SHA512
 
 /* Disable algorithms you don't need */
 #define NO_RSA
