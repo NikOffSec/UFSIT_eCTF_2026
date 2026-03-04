@@ -15,7 +15,7 @@ import json
 import argparse
 from dataclasses import dataclass
 import secrets as pysecrets
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+#from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 # Keep this as 8 
 MAX_PERMS = 8
@@ -245,7 +245,6 @@ def secrets_to_c_header(
         f.write('#include <stdint.h>\n')
         f.write('#include <stdbool.h>\n')
         f.write('#include "security.h"\n\n')
-        f.write('#include "ecc_perm_check.h"\n\n')
 
         # HSM PIN verifier material (plaintext PIN is NOT stored)
         f.write(f"#define PIN_SALT_LEN {PIN_SALT_LEN}\n")
@@ -294,36 +293,6 @@ def secrets_to_c_header(
                 f"{{{_hex_to_c_array(priv_hex)}}};\n\n"
             )
 
-        # Write all of the group key pairs
-        f.write("static const struct group_key_pair personal_key_pairs[DEPLOYMENT_GROUP_COUNT] = {\n")
-        for perm in permissions:
-            keys = group_keys[gid_str]
-            pub_hex = keys["public_key"]
-            priv_hex = keys["private_key"]
-
-            f.write(
-                f"\t{{0x{perm.group_id:04x}, "
-                f"Group{str(perm.group_id)}_Public, "
-                f"Group{str(perm.group_id)}_Private"
-                "},\n"
-            )
-        f.write("};\n\n")
-
-        f.write("static const struct group_key_pair all_public_key_pairs[DEPLOYMENT_GROUP_COUNT] = {\n")
-        for perm in permissions:
-            keys = group_keys[gid_str]
-            pub_hex = keys["public_key"]
-            priv_hex = keys["private_key"]
-
-            f.write(
-                f"\t{{0x{perm.group_id:04x}, "
-                f"Group{str(perm.group_id)}_Public, "
-                f"Group{str(perm.group_id)}_Private"
-                "},\n"
-            )
-        f.write("};\n\n")
-
-
         # Permissions table (deterministic padded)
         f.write("const static group_permission_t global_permissions[MAX_PERMS] = {\n")
         for perm in permissions:
@@ -336,7 +305,6 @@ def secrets_to_c_header(
         for _ in range(MAX_PERMS - len(permissions)):
             f.write("\t{0x0000, false, false, false},\n")
         f.write("};\n")
-
 
         f.write("\n#endif  // __SECRETS_H__\n")
 
