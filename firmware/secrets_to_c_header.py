@@ -289,36 +289,45 @@ def secrets_to_c_header(
                 f"static const uint8_t Group{int(gid_str)}_Public[32] = "
                 f"{{{_hex_to_c_array(pub_hex)}}};\n"
             )
-            f.write(
-                f"static const uint8_t Group{int(gid_str)}_Private[32] = "
-                f"{{{_hex_to_c_array(priv_hex)}}};\n\n"
-            )
+            
+            # if we don't have the group assigned to us then don't save the private key
+            for perm in permissions:
+                if (int(gid_str) == perm.group_id) and (perm.receive == True):
+                    f.write(
+                        f"static const uint8_t Group{int(gid_str)}_Private[32] = "
+                        f"{{{_hex_to_c_array(priv_hex)}}};\n\n"
+                    )
+                    break
 
-        # Write all of the group key pairs
+        # Write all of the group key pairs for the personal HSM, this includes public and private keys
         f.write("static const struct group_key_pair personal_key_pairs[DEPLOYMENT_GROUP_COUNT] = {\n")
         for perm in permissions:
-            keys = group_keys[gid_str]
-            pub_hex = keys["public_key"]
-            priv_hex = keys["private_key"]
+            # if a group does not have the recieve perm don't give it a private key in it's firmware only public
+            if perm.receive == True:
+                f.write(
+                    f"\t{{0x{perm.group_id:04x}, "
+                    f"Group{str(perm.group_id)}_Public, "
+                    f"Group{str(perm.group_id)}_Private"
+                    "},\n"
+                )
+            else:
+                f.write(
+                    f"\t{{0x{perm.group_id:04x}, "
+                    f"Group{str(perm.group_id)}_Public, "
+                    "NULL"
+                    "},\n"
+                )
 
-            f.write(
-                f"\t{{0x{perm.group_id:04x}, "
-                f"Group{str(perm.group_id)}_Public, "
-                f"Group{str(perm.group_id)}_Private"
-                "},\n"
-            )
         f.write("};\n\n")
 
-        f.write("static const struct group_key_pair all_public_key_pairs[DEPLOYMENT_GROUP_COUNT] = {\n")
-        for perm in permissions:
-            keys = group_keys[gid_str]
-            pub_hex = keys["public_key"]
-            priv_hex = keys["private_key"]
 
+        # Just public keys go here
+        f.write("static const struct group_key_pair all_public_key_pairs[DEPLOYMENT_GROUP_COUNT] = {\n")
+        for gid_str in sorted(group_keys.keys(), key=lambda x: int(x)):    
             f.write(
-                f"\t{{0x{perm.group_id:04x}, "
-                f"Group{str(perm.group_id)}_Public, "
-                f"Group{str(perm.group_id)}_Private"
+                f"\t{{0x{gid_str}, "
+                f"Group{gid_str}_Public, "
+                "NULL"
                 "},\n"
             )
         f.write("};\n\n")
