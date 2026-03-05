@@ -10,7 +10,7 @@ struct group_key_pair {
 };
 
 
-int demonstraite_permission(uint32_t group, uint8_t *proof, uint8_t *proof_signature);
+int demonstrate_permission(uint32_t group, uint8_t *proof, uint8_t *proof_signature);
 
 int check_permission(uint32_t group, uint8_t *original_proof_bytes, uint8_t *provided_signature);
 
@@ -21,3 +21,4 @@ This is just random bytes of PROOF_SIZE
 int generate_proof(uint8_t *proof);
 
 #endif // ECC_PERM_H
+
