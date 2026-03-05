@@ -236,6 +236,8 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
     // request the file list from the neighboring device
     write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, NULL, 0);
 
+    print_debug("Wrote request");
+
     // set essentially no limit to the receive message size
     len_recv_msg = 0xffff;
 
@@ -245,6 +247,8 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
         print_error("Opcode mismatch");
         return -1;
     }
+
+    print_debug("Received file list");
 
     // return the final list to the user
     write_packet(CONTROL_INTERFACE, INTERROGATE_MSG, &final_list_buf, len_recv_msg);
