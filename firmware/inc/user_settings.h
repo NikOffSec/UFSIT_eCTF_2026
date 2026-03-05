@@ -25,7 +25,15 @@
 
 /* ECC Support */
 #define HAVE_ED25519
+#define HAVE_ED25519_VERIFY
+#define HAVE_ED25519_SIGN
+#define HAVE_ED25519_KEY_IMPORT
+#define CUSTOM_RAND_GENERATE_BLOCK
+
+#define WOLFSSL_NO_MALLOC 
+#define WC_NO_CONSTRUCTORS
 #define WOLFSSL_SHA512
+#define WOLFSSL_SHA256
 
 /* Disable algorithms you don't need */
 #define NO_RSA

@@ -20,6 +20,4 @@ This is just random bytes of PROOF_SIZE
 */
 int generate_proof(uint8_t *proof);
 
-
-
 #endif // ECC_PERM_H

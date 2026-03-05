@@ -1,6 +1,11 @@
+#include <stdint.h>
+
+#include "wolfssl/wolfcrypt/ed25519.h"
+
 #include "ecc_perm_check.h"
 #include "security.h"
 #include "secrets.h"
+#include "host_messaging.h"
 
 int get_key_index(uint32_t group) {
     // no compiled permissions
@@ -42,11 +47,11 @@ int demonstraite_permission(uint32_t group, uint8_t *proof, uint8_t *proof_signa
 
     if(wc_ed25519_check_key(&key)) {
         print_error("key bad!");
-        return -4
+        return -4;
     }
-        
-    if(wc_ed25519_sign_msg_ex(proof, 16, proof_signature, ED25519_SIG_SIZE,
-                                 &key, Ed25519, NULL, 0));
+    word32 sigLen = ED25519_SIG_SIZE;
+    if(wc_ed25519_sign_msg_ex(proof, 16, proof_signature, &sigLen,
+                                 &key, Ed25519, NULL, 0))
         return -5;
 
     return 0;

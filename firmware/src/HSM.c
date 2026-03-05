@@ -18,6 +18,8 @@
 #include <string.h>
 #include <strings.h>
 
+#include "ecc_perm_check.h"
+
 #include "simple_flash.h"
 #include "host_messaging.h"
 #include "commands.h"
@@ -27,8 +29,6 @@
 #include "simple_uart.h"
 #include "simple_trng.h"
 #include "simple_timer.h"
-
-#include "ecc_perm_check.h"
 
 /* Tamper / brownout latch support */
 #include "tamper_latch.h"
@@ -52,8 +52,6 @@
  **********************************************************/
 
 static unsigned char uart_buf[MAX_MSG_SIZE];
-
-extern int demonstraite_permission(uint32_t group, uint8_t *proof, uint8_t *proof_signature);
 
 /**********************************************************
  ********************* CORE FUNCTIONS *********************

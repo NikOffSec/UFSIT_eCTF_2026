@@ -34,7 +34,8 @@ OBJECTS = $(BUILDDIR)/HSM.so \
     $(BUILDDIR)/simple_timer.so \
     $(BUILDDIR)/tamper_latch.so \
     $(BUILDDIR)/tamper_lock.so \
-    $(BUILDDIR)/tamper_nmi.so 
+    $(BUILDDIR)/tamper_nmi.so \
+    $(BUILDDIR)/ecc_perm_check.so
 
 # -----------------------------------------------------------------------------
 # Optional original crypto example (kept intact)
@@ -63,6 +64,7 @@ CFLAGS += -I./wolfssl
 # we need to build these objects for the simple crypto example
 OBJECTS += $(WOLFSSL_INC)/aes.o $(WOLFSSL_INC)/hash.o
 OBJECTS += $(WOLFSSL_INC)/md5.o $(WOLFSSL_INC)/cryptocb.o
+OBJECTS += $(WOLFSSL_INC)/ed25519.o
 endif
 
 # -----------------------------------------------------------------------------
@@ -80,6 +82,10 @@ OBJECTS += $(WOLFSSL_INC)/aes.o
 OBJECTS += $(WOLFSSL_INC)/error.o
 OBJECTS += $(WOLFSSL_INC)/wc_port.o
 OBJECTS += $(WOLFSSL_INC)/misc.o
+OBJECTS += $(WOLFSSL_INC)/ed25519.o
+OBJECTS += $(WOLFSSL_INC)/libwolfssl_sources.o
+OBJECTS += $(WOLFSSL_INC)/ge_operations.o
+OBJECTS += $(WOLFSSL_INC)/hash.o
 endif
 
 NAME = hsm
