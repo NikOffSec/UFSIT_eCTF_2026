@@ -30,8 +30,11 @@ int demonstrate_permission(uint32_t group, uint8_t *proof, uint8_t *proof_signat
 
     int i;
 
-    if((i = get_key_index(group)) == -1)
+    if((i = get_key_index(group)) == -1) {
+        print_error("Group not found");
         return -1;
+    }
+
 
     // no private key, no recieve perm
     if(personal_key_pairs[i].private == NULL) 
@@ -42,6 +45,7 @@ int demonstrate_permission(uint32_t group, uint8_t *proof, uint8_t *proof_signat
     wc_ed25519_init(&key);
 
     if(wc_ed25519_import_private_key_ex(personal_key_pairs[i].private, 32, personal_key_pairs[i].public, 32, &key, 1)) {
+        print_error("Import failed");
         return -3;
     }
 
@@ -51,7 +55,10 @@ int demonstrate_permission(uint32_t group, uint8_t *proof, uint8_t *proof_signat
     }
     word32 sigLen = ED25519_SIG_SIZE;
     if(wc_ed25519_sign_msg_ex(proof, 16, proof_signature, &sigLen,
-                                 &key, Ed25519, NULL, 0))
+                                 &key, Ed25519, NULL, 0)){
+        print_error("Sign failed");
+        return -5;
+    }
         return -5;
 
     return 0;
