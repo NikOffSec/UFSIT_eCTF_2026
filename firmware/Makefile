@@ -65,6 +65,10 @@ CFLAGS += -I./wolfssl
 OBJECTS += $(WOLFSSL_INC)/aes.o $(WOLFSSL_INC)/hash.o
 OBJECTS += $(WOLFSSL_INC)/md5.o $(WOLFSSL_INC)/cryptocb.o
 OBJECTS += $(WOLFSSL_INC)/ed25519.o
+OBJECTS += $(WOLFSSL_INC)/ge_operations.o
+OBJECTS += $(WOLFSSL_INC)/fe_operations.o
+OBJECTS += $(WOLFSSL_INC)/sha512.o
+OBJECTS += $(WOLFSSL_INC)/hash.o
 endif
 
 # -----------------------------------------------------------------------------
@@ -83,8 +87,9 @@ OBJECTS += $(WOLFSSL_INC)/error.o
 OBJECTS += $(WOLFSSL_INC)/wc_port.o
 OBJECTS += $(WOLFSSL_INC)/misc.o
 OBJECTS += $(WOLFSSL_INC)/ed25519.o
-OBJECTS += $(WOLFSSL_INC)/libwolfssl_sources.o
 OBJECTS += $(WOLFSSL_INC)/ge_operations.o
+OBJECTS += $(WOLFSSL_INC)/fe_operations.o
+OBJECTS += $(WOLFSSL_INC)/sha512.o
 OBJECTS += $(WOLFSSL_INC)/hash.o
 endif
 
