@@ -154,13 +154,13 @@ int main(void)
             uint8_t proof[16] = {0xaa};
             uint8_t sig[64] = {0};
             memset(sig, 0, 64);
-            int r = demonstraite_permission(0x1234, proof, sig);
+            int r = demonstrate_permission(0x1234, proof, sig);
 
-            if (r != 0)
+            if (r != 0) {
                 print_error("Perm check error!");
-
+                print_hex_debug(&r, sizeof(r));
+            }
             
-
             STATUS_LED_OFF();
             list(pkt_len, &uart_buf);
             break;

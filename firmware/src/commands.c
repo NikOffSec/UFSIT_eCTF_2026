@@ -194,6 +194,7 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&request, sizeof(receive_request_t));
 
     // set essentially no limit to the receive message size
+    // TODO - fix
     len_recv_msg = 0xffff;
 
     // recieve the response message

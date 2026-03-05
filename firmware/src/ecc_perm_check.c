@@ -26,7 +26,7 @@ int get_key_index(uint32_t group) {
 }
 
 // sign the proof with your ecc key for that group
-int demonstraite_permission(uint32_t group, uint8_t *proof, uint8_t *proof_signature) {
+int demonstrate_permission(uint32_t group, uint8_t *proof, uint8_t *proof_signature) {
 
     int i;
 
