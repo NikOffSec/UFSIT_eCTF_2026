@@ -23,9 +23,6 @@ void NMI_Handler(void)
         // Then clear pending status if possible
         DL_SYSCTL_clearNonMaskableInterruptStatus(DL_SYSCTL_NMI_BORLVL);
     } else {
-        // Optional policy:
-        // either ignore non-BOR NMI, or fail closed on any NMI.
-        // For your competition use-case, failing closed is reasonable.
         tamper_latch_trip();
     }
 
