@@ -108,6 +108,8 @@ typedef struct {
 typedef struct {
     uint16_t sender_id;
     uint32_t ctr;
+    uint8_t perm_blob_len;              // actual bytes used in perm_blob
+    uint8_t perm_blob[PERM_BLOB_MAX];   // packed permissions (gid_hi, gid_lo, flags)
     uint8_t nonce[GMAC_NONCE_LEN];
     uint8_t tag[GMAC_TAG_LEN];
 } interrogate_request_t;

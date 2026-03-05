@@ -63,7 +63,7 @@ static file_t current_file; /* retained to minimize diffs; currently unused */
 
 static size_t build_interrogate_request_aad(const interrogate_request_t *req,
                                             uint8_t *out, size_t out_cap) {
-    size_t need = INTR_REQ_DOMAIN_LEN + 2u + 4u;
+    size_t need = INTR_REQ_DOMAIN_LEN + 2u + 4u + req->perm_blob_len;
     if (out_cap < need) return 0;
 
     size_t off = 0;
@@ -79,6 +79,10 @@ static size_t build_interrogate_request_aad(const interrogate_request_t *req,
     out[off++] = (uint8_t)(req->ctr >> 8);
     out[off++] = (uint8_t)(req->ctr & 0xFF);
 
+    out[off++] = req->perm_blob_len;
+
+    memcpy(&out[off], req->perm_blob, req->perm_blob_len);
+    off += req->perm_blob_len;
     return off;
 }
 
@@ -245,6 +249,8 @@ static size_t build_receive_response_aad(const receive_request_t *req,
  *  @param file_list A pointer to the list_response_t variable in
  *      which to store the results
  */
+
+
 void generate_list_files(list_response_t *file_list) {
     file_list->n_files = 0;
     file_t temp_file;
@@ -252,6 +258,7 @@ void generate_list_files(list_response_t *file_list) {
     for (uint8_t i = 0; i < MAX_FILE_COUNT; i++) {
         if (is_slot_in_use(i)) {
             read_file(i, &temp_file);
+
 
             file_list->metadata[file_list->n_files].slot = i;
             file_list->metadata[file_list->n_files].group_id = temp_file.group_id;
@@ -265,6 +272,41 @@ void generate_list_files(list_response_t *file_list) {
     }
 }
 
+void generate_list_files_with_req(list_response_t *file_list,
+                                  interrogate_request_t *req){
+    file_list->n_files = 0;
+    file_t temp_file;
+
+    for (uint8_t i = 0; i < MAX_FILE_COUNT; i++) {
+        if (is_slot_in_use(i)) {
+            read_file(i, &temp_file);
+            // Sender-side local policy: this board must be allowed to transfer this group
+            //idk how interrogate works (can the requester get a file list if it has perms?)
+            if (!validate_permission(temp_file.group_id, PERM_RECEIVE)) {
+                //print_error("Local policy denies transfer for file group");
+                continue;
+            }
+
+            // Requester-side claimed perms (authenticated by GMAC)
+            //?
+            if (!interrogate_requester_has_receive_perm_for_group(req, temp_file.group_id)) {
+                //print_error("Requester lacks RECEIVE permission for file group");
+                continue;
+            }
+
+
+
+            file_list->metadata[file_list->n_files].slot = i;
+            file_list->metadata[file_list->n_files].group_id = temp_file.group_id;
+            strncpy(file_list->metadata[file_list->n_files].name,
+                    (char *)&temp_file.name,
+                    MAX_NAME_SIZE - 1);
+            file_list->metadata[file_list->n_files].name[MAX_NAME_SIZE - 1] = '\0';
+
+            file_list->n_files++;
+        }
+    }
+}
 static uint8_t perm_flags(const group_permission_t *p) {
     return (uint8_t)((p->read ? 1u : 0u) |
                      (p->write ? 2u : 0u) |
@@ -336,6 +378,20 @@ static size_t build_receive_request_aad(const receive_request_t *req,
 }
 
 static bool requester_has_receive_perm_for_group(const receive_request_t *req, uint16_t group_id) {
+    if (req->perm_blob_len > PERM_BLOB_MAX) return false;
+    if ((req->perm_blob_len % 3u) != 0u) return false;
+
+    for (size_t i = 0; i < req->perm_blob_len; i += 3u) {
+        uint16_t gid = ((uint16_t)req->perm_blob[i] << 8) | (uint16_t)req->perm_blob[i + 1];
+        uint8_t flags = req->perm_blob[i + 2];
+
+        if (gid == group_id) {
+            return ((flags & 0x04u) != 0u); // receive bit
+        }
+    }
+    return false;
+}
+static bool interrogate_requester_has_receive_perm_for_group(const interrogate_request_t *req, uint16_t group_id) {
     if (req->perm_blob_len > PERM_BLOB_MAX) return false;
     if ((req->perm_blob_len % 3u) != 0u) return false;
 
@@ -596,6 +652,14 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
     req.sender_id = HSM_ID;
     req.ctr = replay_ctr_next_local();
 
+    size_t perm_blob_len = pack_permissions_sorted(
+        global_permissions, MAX_PERMS, req.perm_blob, sizeof(req.perm_blob));
+    if (perm_blob_len == 0 && MAX_PERMS > 0) {
+        //print_error("Packing permissions failed");
+        return -1;
+    }
+    request.perm_blob_len = (uint8_t)perm_blob_len;
+
     if (get_request_nonce(req.nonce) != 0) return -1;
 
     uint8_t req_aad[INTR_REQ_DOMAIN_LEN + 20];
@@ -658,7 +722,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             interrogate_request_t req;
             interrogate_response_t resp;
             uint8_t expected_req_tag[GMAC_TAG_LEN];
-            uint8_t req_aad[INTR_REQ_DOMAIN_LEN + 2 + 4];
+            uint8_t req_aad[INTR_REQ_DOMAIN_LEN + 2 + 4 + PERM_BLOB_MAX];
             uint8_t resp_aad[INTR_RESP_DOMAIN_LEN + 2 + 2 + 4 + GMAC_NONCE_LEN + sizeof(list_response_t)];
             size_t req_aad_len, resp_aad_len;
 
@@ -678,6 +742,10 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             if (gmac_compute_tag(GMAC_KEY, req.nonce, req_aad, req_aad_len, expected_req_tag) != 0) return -1;
             if (!gmac_tag_eq_ct(expected_req_tag, req.tag)) return -1;
             if (!replay_ctr_accept(req.sender_id, req.ctr)) return -1;
+            if (req.perm_blob_len > PERM_BLOB_MAX || (req.perm_blob_len % 3u) != 0u) {
+                print_error("Invalid permission blob length");
+                return -1;
+            }
 
             // Replay protect request
             if (!nonce_accept_test(req.sender_id, req.nonce, GMAC_NONCE_LEN)) return -1;
@@ -685,7 +753,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
             // Build list payload
             resp.responder_id = HSM_ID;
             memset(&resp.list, 0, sizeof(resp.list));
-            generate_list_files(&resp.list);
+            generate_list_files_with_req(&resp.list, req);
 
             // Sign response
             if (get_request_nonce(resp.nonce) != 0) return -1;
