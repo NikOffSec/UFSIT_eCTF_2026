@@ -17,9 +17,9 @@ libdir="${exec_prefix}/lib"
 infodir="${datarootdir}/info"
 mandir="${datarootdir}/man"
 includedir="${prefix}/include"
-target="x86_64-pc-linux-gnu"
-host="x86_64-pc-linux-gnu"
-build="x86_64-pc-linux-gnu"
+target="aarch64-unknown-linux-gnu"
+host="aarch64-unknown-linux-gnu"
+build="aarch64-unknown-linux-gnu"
  
 if test "$#" -eq 0; then
    cat <<EOF

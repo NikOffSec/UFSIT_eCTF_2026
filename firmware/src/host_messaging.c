@@ -183,6 +183,7 @@ int write_packet(int uart_id, msg_type_t type, const void *buf, uint16_t len) {
  *
  *  @return MSG_OK on success, else other msg_status_t
 */
+
 int read_packet(int uart_id, msg_type_t* cmd, void *buf, uint16_t *len) {
     msg_header_t header = {0};
 
@@ -194,12 +195,6 @@ int read_packet(int uart_id, msg_type_t* cmd, void *buf, uint16_t *len) {
     read_header(uart_id, &header);
 
     *cmd = header.cmd;
-
-    print_debug("Max length (hex):");
-    print_hex_debug(len,2);
-
-    print_debug("Message length (hex):");
-    print_hex_debug(&header.len,2);
 
     if(len == NULL)
         return MSG_BAD_LEN;

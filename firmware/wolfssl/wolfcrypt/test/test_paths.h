@@ -28,7 +28,7 @@
         #endif
     #endif
 #else
-    #define CERT_PREFIX "/home/zin/Documents/programming_projects/UFSIT_eCTF_2026/firmware/wolfssl/"
-    #define CERT_WRITE_TEMP_DIR "/home/zin/Documents/programming_projects/UFSIT_eCTF_2026/firmware/wolfssl/"
+    #define CERT_PREFIX "/home/ectf/UFSIT_eCTF_2026/firmware/wolfssl/"
+    #define CERT_WRITE_TEMP_DIR "/home/ectf/UFSIT_eCTF_2026/firmware/wolfssl/"
 #endif /* CERT_REL_PREFIX */
 #endif /* NO_FILESYSTEM */

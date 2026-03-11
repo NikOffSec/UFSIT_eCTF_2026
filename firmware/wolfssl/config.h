@@ -260,13 +260,13 @@
 #define STDC_HEADERS 1
 
 /* If the compiler supports a TLS storage class, define it to that here */
-#define TLS thread_local
+#define TLS _Thread_local
 
 /* Define if the code was built from VCS. */
-#define VCS_CHECKOUT 0
+#define VCS_CHECKOUT 1
 
 /* VCS system */
-#define VCS_SYSTEM "none"
+#define VCS_SYSTEM "git"
 
 /* Use __declspec(dllexport) when building library */
 /* #undef WOLFSSL_DLL */
