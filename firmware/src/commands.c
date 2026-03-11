@@ -236,8 +236,6 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
     // request the file list from the neighboring device
     write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, NULL, 0);
 
-    print_debug("Wrote request");
-
     // set message read limit to size of buffer
     len_recv_msg = sizeof(final_list_buf);
 
@@ -247,22 +245,7 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
         print_error("Opcode mismatch");
         return -1;
     }
-
-    print_debug("Received file list");
-
-    print_debug("Num files:");
-    print_hex_debug(&final_list_buf.n_files,4);
-    for (int i = 0; i < final_list_buf.n_files; i++){
-        
-        print_hex_debug(&final_list_buf.metadata[i].group_id, 2);
-        print_debug(final_list_buf.metadata[i].name);
-        print_hex_debug(&final_list_buf.metadata[i].slot, 1);
-    }
-
-    //print_debug(sizeof(final_list_buf.n_files).to_string());
-    //print_debug(sizeof(file_metadata_t).to_string());
-    //print_debug((sizeof(final_list_buf.n_files) + (final_list_buf.n_files * sizeof(final_list_buf.metadata))).to_string());
-
+    
     // return the final list to the user
     write_packet(CONTROL_INTERFACE, INTERROGATE_MSG, &final_list_buf, sizeof(final_list_buf.n_files) + (final_list_buf.n_files * sizeof(file_metadata_t)));
     return 0;
@@ -295,15 +278,6 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             // generate a list of files for the other device
             generate_list_files(&file_list);
-
-            print_debug("Num files:");
-            print_hex_debug(&file_list.n_files,4);
-            for (int i = 0; i < file_list.n_files; i++){
-                
-                print_hex_debug(&file_list.metadata[i].group_id, 2);
-                print_hex_debug(&file_list.metadata[i].name, 32);
-                print_hex_debug(&file_list.metadata[i].slot, 1);
-            }
 
             // TODO: the reference design does not implement *ANY* security
             // you will want to add something here to comply with SR1

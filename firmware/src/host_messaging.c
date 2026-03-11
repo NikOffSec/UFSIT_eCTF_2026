@@ -194,17 +194,7 @@ int read_packet(int uart_id, msg_type_t* cmd, void *buf, uint16_t *len) {
 
     read_header(uart_id, &header);
 
-    print_debug("Header:");
-
-    print_hex_debug(&header, sizeof(header));
-
     *cmd = header.cmd;
-
-    print_debug("Max length (hex):");
-    print_hex_debug(len,2);
-
-    print_debug("Message length (hex):");
-    print_hex_debug(&header.len,2);
 
     if(len == NULL)
         return MSG_BAD_LEN;
@@ -230,8 +220,6 @@ int read_packet(int uart_id, msg_type_t* cmd, void *buf, uint16_t *len) {
             }
         }
     }
-
-    print_debug("Returning from read_packet()");
 
     return MSG_OK;
 }
