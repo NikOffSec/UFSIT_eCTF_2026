@@ -142,7 +142,31 @@ int write_hex(int uart_id, msg_type_t type, const void *buf, size_t len) {
  *
  *  @return MSG_OK on success, else other msg_status_t
 */
-int write_packet(int uart_id, msg_type_t type, const void *buf, uint16_t len) {
+int write_packet(int uart_id, msg_type_t type, const void *buf, uint16_t len)
+{
+    msg_header_t header;
+
+    header.magic = MSG_MAGIC;
+    header.cmd   = type;
+    header.len   = len;
+
+    if (write_bytes(uart_id, &header, MSG_HEADER_SIZE, false) != MSG_OK)
+        return MSG_NO_ACK;
+
+    if (read_ack(uart_id) != MSG_OK)
+        return MSG_NO_ACK;
+
+    if (len > 0) {
+        if (write_bytes(uart_id, buf, len, type != DEBUG_MSG) != MSG_OK)
+            return MSG_NO_ACK;
+    }
+
+    if (read_ack(uart_id) != MSG_OK)
+        return MSG_NO_ACK;
+
+    return MSG_OK;
+}
+/*int write_packet(int uart_id, msg_type_t type, const void *buf, uint16_t len) {
     msg_header_t hdr;
     int result;
 
@@ -172,7 +196,7 @@ int write_packet(int uart_id, msg_type_t type, const void *buf, uint16_t len) {
     }
 
     return MSG_OK;
-}
+}*/
 
 /** @brief Reads a packet from console UART.
  *
@@ -183,7 +207,46 @@ int write_packet(int uart_id, msg_type_t type, const void *buf, uint16_t len) {
  *
  *  @return MSG_OK on success, else other msg_status_t
 */
-int read_packet(int uart_id, msg_type_t* cmd, void *buf, uint16_t *len) {
+
+int read_packet(int uart_id, msg_type_t *cmd, void *buf, uint16_t *len)
+{
+    msg_header_t header;
+
+    if (!cmd || !len)
+        return MSG_BAD_PTR;
+
+    if (read_bytes(uart_id, &header, MSG_HEADER_SIZE) != MSG_OK)
+        return MSG_NO_ACK;
+
+    if (header.magic != MSG_MAGIC)
+        return MSG_BAD_PTR;
+
+    *cmd = header.cmd;
+
+    /* ACK header immediately */
+    if (write_ack(uart_id) != MSG_OK)
+        return MSG_NO_ACK;
+
+    if (header.len > *len)
+        return MSG_BAD_LEN;
+
+    if (header.len > 0) {
+        if (!buf)
+            return MSG_BAD_PTR;
+
+        if (read_bytes(uart_id, buf, header.len) != MSG_OK)
+            return MSG_NO_ACK;
+    }
+
+    /* ACK payload */
+    if (write_ack(uart_id) != MSG_OK)
+        return MSG_NO_ACK;
+
+    *len = header.len;
+
+    return MSG_OK;
+}
+/*int read_packet(int uart_id, msg_type_t* cmd, void *buf, uint16_t *len) {
     msg_header_t header = {0};
 
     // cmd must be a valid pointer
@@ -233,4 +296,4 @@ int read_packet(int uart_id, msg_type_t* cmd, void *buf, uint16_t *len) {
     print_debug("Returning from read_packet()");
 
     return MSG_OK;
-}
+}*/
