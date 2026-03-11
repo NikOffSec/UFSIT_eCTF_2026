@@ -187,22 +187,21 @@ int read_packet(int uart_id, msg_type_t* cmd, void *buf, uint16_t *len) {
     msg_header_t header = {0};
 
     // cmd must be a valid pointer
-    if (cmd == NULL) {
-        return MSG_BAD_PTR;
-    }
-
     read_header(uart_id, &header);
-
     *cmd = header.cmd;
 
-    print_debug("Max length (hex):");
-    print_hex_debug(len,2);
-
-    print_debug("Message length (hex):");
-    print_hex_debug(&header.len,2);
-
-    if(len == NULL)
+    if (len == NULL) {
         return MSG_BAD_LEN;
+    }
+
+    if (header.cmd != ACK_MSG) {
+        write_ack(uart_id);
+    }
+
+    // print_debug("Max length (hex):");
+    // print_hex_debug(len,2);
+    // print_debug("Message length (hex):");
+    // print_hex_debug(&header.len,2);
 
     // Send ACK for the header before length validation to prevent deadlock
     if (header.cmd != ACK_MSG) {

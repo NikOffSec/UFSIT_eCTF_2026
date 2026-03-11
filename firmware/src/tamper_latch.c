@@ -26,7 +26,6 @@ static void tl_write_record(uint8_t flag)
     uint8_t inv = (uint8_t)~flag;
     uint8_t cks = tl_checksum(TL_MAGIC_VALUE, flag, inv);
 
-    /* Replace LFSS with your actual LFSS base symbol if needed */
     DL_ScratchPad_writeDataByte(LFSS, TL_WORD_IDX, TL_MAGIC_BYTE_IDX, TL_MAGIC_VALUE);
     DL_ScratchPad_writeDataByte(LFSS, TL_WORD_IDX, TL_FLAG_BYTE_IDX,  flag);
     DL_ScratchPad_writeDataByte(LFSS, TL_WORD_IDX, TL_INV_BYTE_IDX,   inv);

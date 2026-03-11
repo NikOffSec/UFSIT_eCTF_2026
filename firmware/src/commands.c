@@ -70,6 +70,7 @@ int list(uint16_t pkt_len, uint8_t *buf) {
 
     if (!check_pin(command->pin)) {
         print_error("Invalid pin");
+        
         return -1;
     }
 
