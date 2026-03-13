@@ -31,14 +31,19 @@
 #define NO_MD4
 #define NO_MD5
 #define NO_SHA
-#define NO_SHA256
-#define NO_SHA512
-#define NO_HMAC
+//#define NO_SHA256
+//#define NO_SHA512
+//#define NO_HMAC
 #define NO_PWDBASED
 #define NO_ASN
 #define NO_CERTS
 #define NO_SESSION_CACHE
 #define NO_CODING
+
+#define WOLFSSL_SHA256
+#define HAVE_HMAC
+#define HAVE_HKDF
+
 
 /* Important: avoid random/DRBG dependencies for this build */
 #define WC_NO_RNG

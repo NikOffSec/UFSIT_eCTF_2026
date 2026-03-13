@@ -19,6 +19,14 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "simple_uart.h"
+#include "wolfssl/wolfcrypt/aes.h"
+#include "wolfssl/wolfcrypt/sha256.h"
+
+//Global session key; should be randomized upon every new session start.
+static byte session_key[16] = {0};
+static byte session_iv[16] = {0};
+static Aes enc;
+static Aes dec;
 
 #define CMD_TYPE_LEN sizeof(char)
 #define CMD_LEN_LEN sizeof(uint16_t)
@@ -35,6 +43,7 @@ typedef enum {
     ACK_MSG = 'A',          // 'A' - 0x41
     DEBUG_MSG = 'D',        // 'D' - 0x44
     ERROR_MSG = 'E',        // 'E' - 0x45
+    SESSION_MSG = 'S',      // 'S' - 0x53
 } msg_type_t;
 
 #pragma pack(push, 1) // Tells the compiler not to pad the struct members
@@ -54,6 +63,10 @@ typedef enum {
 } msg_status_t;
 
 #define MSG_HEADER_SIZE sizeof(msg_header_t)
+
+//Use this to begin a session
+int start_exchange_listener();
+int start_exchange_client();
 
 int write_bytes(int uart_id, const void *buf, uint16_t len, bool should_ack);
 
@@ -77,7 +90,7 @@ int write_hex(int uart_id, msg_type_t type, const void *buf, size_t len);
  *
  *  @return 0 on success. A negative value on failure.
 */
-int write_packet(int uart_id, msg_type_t type, const void *buf, uint16_t len);
+int write_packet(int uart_id, msg_type_t type, const void *buf, uint16_t len, bool init);
 
 /** @brief Reads a packet from console UART.
  *
@@ -88,16 +101,16 @@ int write_packet(int uart_id, msg_type_t type, const void *buf, uint16_t len);
  *
  *  @return 0 on success, a negative number on failure
 */
-int read_packet(int uart_id, msg_type_t* cmd, void *buf, uint16_t *len);
+int read_packet(int uart_id, msg_type_t* cmd, void *buf, uint16_t len, bool init);
 
 // Macro definitions to print the specified format for error messages
-#define print_error(msg) write_packet(CONTROL_INTERFACE, ERROR_MSG, msg, strlen(msg))
+#define print_error(msg) write_packet(CONTROL_INTERFACE, ERROR_MSG, msg, strlen(msg), false)
 
 // Macro definitions to print the specified format for debug messages
-#define print_debug(msg) write_packet(CONTROL_INTERFACE, DEBUG_MSG, msg, strlen(msg))
+#define print_debug(msg) write_packet(CONTROL_INTERFACE, DEBUG_MSG, msg, strlen(msg), false)
 #define print_hex_debug(msg, len) write_hex(CONTROL_INTERFACE, DEBUG_MSG, msg, len)
 
 // Macro definitions to write ack message
-#define write_ack(uart_id) write_packet(uart_id, ACK_MSG, NULL, 0)
+#define write_ack(uart_id) write_packet(uart_id, ACK_MSG, NULL, 0, false)
 
 #endif

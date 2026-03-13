@@ -75,7 +75,7 @@ int list(uint16_t pkt_len, uint8_t *buf) {
 
     // write success packet with list
     pkt_len_t length = LIST_PKT_LEN(file_list.n_files);
-    write_packet(CONTROL_INTERFACE, LIST_MSG, &file_list, length);
+    write_packet(CONTROL_INTERFACE, LIST_MSG, &file_list, length, false);
     return 0;
 }
 
@@ -115,7 +115,7 @@ int read(uint16_t pkt_len, uint8_t *buf) {
 
     // write a success message with the file information
     pkt_len_t length = MAX_NAME_SIZE + curr_file.contents_len;
-    write_packet(CONTROL_INTERFACE, READ_MSG, &file_info, length);
+    write_packet(CONTROL_INTERFACE, READ_MSG, &file_info, length, false);
     return 0;
 }
 
@@ -157,7 +157,7 @@ int write(uint16_t pkt_len, uint8_t *buf) {
     }
 
     // Success message with an empty body
-    write_packet(CONTROL_INTERFACE, WRITE_MSG, NULL, 0);
+    write_packet(CONTROL_INTERFACE, WRITE_MSG, NULL, 0, false);
     return 0;
 }
 
@@ -191,13 +191,13 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
     memcpy(&request.permissions, &global_permissions, sizeof(group_permission_t) * MAX_PERMS);
 
     // request the file from the neighboring device
-    write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&request, sizeof(receive_request_t));
+    write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, (void *)&request, sizeof(receive_request_t), false);
 
     // set essentially no limit to the receive message size
     len_recv_msg = 0xffff;
 
     // recieve the response message
-    read_packet(TRANSFER_INTERFACE, &cmd, &recv_resp, &len_recv_msg);
+    read_packet(TRANSFER_INTERFACE, &cmd, &recv_resp, len_recv_msg, false);
     if (cmd != RECEIVE_MSG) {
         print_error("Opcode mismatch");
         return -1;
@@ -209,7 +209,7 @@ int receive(uint16_t pkt_len, uint8_t *buf) {
         return -1;
     }
     // empty success message
-    write_packet(CONTROL_INTERFACE, RECEIVE_MSG, NULL, 0);
+    write_packet(CONTROL_INTERFACE, RECEIVE_MSG, NULL, 0, false);
     return 0;
 }
 
@@ -234,20 +234,20 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
     }
 
     // request the file list from the neighboring device
-    write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, NULL, 0);
+    write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, NULL, 0, false);
 
     // set message read limit to size of buffer
     len_recv_msg = sizeof(final_list_buf);
 
     // recieve the response message
-    read_packet(TRANSFER_INTERFACE, &cmd, &final_list_buf, &len_recv_msg);
+    read_packet(TRANSFER_INTERFACE, &cmd, &final_list_buf, len_recv_msg, false);
     if (cmd != INTERROGATE_MSG) {
         print_error("Opcode mismatch");
         return -1;
     }
     
     // return the final list to the user
-    write_packet(CONTROL_INTERFACE, INTERROGATE_MSG, &final_list_buf, sizeof(final_list_buf.n_files) + (final_list_buf.n_files * sizeof(file_metadata_t)));
+    write_packet(CONTROL_INTERFACE, INTERROGATE_MSG, &final_list_buf, sizeof(final_list_buf.n_files) + (final_list_buf.n_files * sizeof(file_metadata_t)), false);
     return 0;
 }
 
@@ -267,9 +267,12 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
     read_length = sizeof(uart_buf);
 
+    //Begin configuring crypto exchange
+    start_exchange_listener();
+
     // Receive a packet from a neighboring hsm
     memset(uart_buf, 0, sizeof(uart_buf));
-    read_packet(TRANSFER_INTERFACE, &cmd, uart_buf, &read_length);
+    read_packet(TRANSFER_INTERFACE, &cmd, uart_buf, read_length, false);
 
     switch (cmd) {
         case INTERROGATE_MSG:
@@ -284,7 +287,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             // send the list of files on this device
             write_length = LIST_PKT_LEN(file_list.n_files);
-            write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, &file_list, write_length);
+            write_packet(TRANSFER_INTERFACE, INTERROGATE_MSG, &file_list, write_length, false);
             break;
         case RECEIVE_MSG:
             // get the request
@@ -310,7 +313,7 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
 
             // send the file to the neighbor hsm
             write_length = sizeof(receive_response_t);
-            write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, &recv_resp, write_length);
+            write_packet(TRANSFER_INTERFACE, RECEIVE_MSG, &recv_resp, write_length, false);
             break;
         default:
             print_error("Bad message type");
@@ -318,6 +321,6 @@ int listen(uint16_t pkt_len, uint8_t *buf) {
     }
 
     // blank success message
-    write_packet(CONTROL_INTERFACE, LISTEN_MSG, NULL, 0);
+    write_packet(CONTROL_INTERFACE, LISTEN_MSG, NULL, 0, false);
     return 0;
 }

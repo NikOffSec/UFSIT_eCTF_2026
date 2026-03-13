@@ -151,13 +151,13 @@ const filesystem_entry_t *get_file_metadata(slot_t slot);
 #include "simple_uart.h"
 
 // Macro definitions to print the specified format for error messages
-#define print_error(msg) write_packet(CONTROL_INTERFACE, ERROR_MSG, msg, strlen(msg))
+#define print_error(msg) write_packet(CONTROL_INTERFACE, ERROR_MSG, msg, strlen(msg), false)
 
 // Macro definitions to print the specified format for debug messages
-#define print_debug(msg) write_packet(CONTROL_INTERFACE, DEBUG_MSG, msg, strlen(msg))
+#define print_debug(msg) write_packet(CONTROL_INTERFACE, DEBUG_MSG, msg, strlen(msg), false)
 #define print_hex_debug(msg, len) write_hex(CONTROL_INTERFACE, DEBUG_MSG, msg, len)
 
 // Macro definitions to write ack message
-#define write_ack(uart_id) write_packet(uart_id, ACK_MSG, NULL, 0)
+#define write_ack(uart_id) write_packet(uart_id, ACK_MSG, NULL, 0, false)
 
 #endif

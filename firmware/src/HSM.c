@@ -88,6 +88,7 @@ void init(void)
 
 int main(void)
 {
+
     char output_buf[128] = {0};
     msg_type_t cmd;
     int result;
@@ -98,10 +99,15 @@ int main(void)
 
     /* process commands forever */
     while (1) {
+        //Randomize session_key in every loop
+        trng_get_bytes(&session_key, sizeof(session_key));
+        trng_get_bytes(&session_iv, sizeof(session_iv));
+        wc_AesInit(&enc, NULL, INVALID_DEVID);
+        wc_AesInit(&dec, NULL, INVALID_DEVID);
+
         /* Fail closed if tamper latch trips during runtime */
-        if (tamper_latch_is_tripped()) {
+        if (tamper_latch_is_tripped())
             enter_tamper_lock_mode();  // never returns
-        }
 
         /* Clear input buffer so sensitive data from a past session isn't retained */
         memset(uart_buf, 0, sizeof(uart_buf));
@@ -113,9 +119,10 @@ int main(void)
         pkt_len = sizeof(uart_buf);
 
         /* IMPORTANT: pass uart_buf (not &uart_buf) */
-        result = read_packet(CONTROL_INTERFACE, &cmd, uart_buf, &pkt_len);
+        result = read_packet(CONTROL_INTERFACE, &cmd, uart_buf, pkt_len, false);
 
         if (result != MSG_OK) {
+
             STATUS_LED_OFF();
             switch (result) {
             case MSG_BAD_PTR:
@@ -184,5 +191,7 @@ int main(void)
             print_error(output_buf);
             break;
         }
+        wc_AesFree(&enc);
+        wc_AesFree(&dec);
     }
 }

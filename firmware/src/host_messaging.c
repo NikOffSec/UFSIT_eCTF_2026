@@ -14,6 +14,7 @@
 #include <stdio.h>
 
 #include "host_messaging.h"
+#include "wolfssl/wolfcrypt/sha256.h"
 
 
 /** @brief Read len bytes from UART, acknowledging after every 256 bytes.
@@ -142,7 +143,7 @@ int write_hex(int uart_id, msg_type_t type, const void *buf, size_t len) {
  *
  *  @return MSG_OK on success, else other msg_status_t
 */
-int write_packet(int uart_id, msg_type_t type, const void *buf, uint16_t len) {
+int write_packet(int uart_id, msg_type_t type, const void *buf, uint16_t len, bool init) {
     msg_header_t hdr;
     int result;
 
@@ -162,6 +163,19 @@ int write_packet(int uart_id, msg_type_t type, const void *buf, uint16_t len) {
         return MSG_NO_ACK;
     }
 
+    //Conditional to encrypt data
+    if(uart_id == TRANSFER_INTERFACE && !init){
+
+        byte* output = malloc(len);
+
+        wc_AesSetKey(&enc, &session_key, 16, &session_iv, AES_ENCRYPTION);
+        wc_AesCbcEncrypt(&enc, output, buf, sizeof(buf));
+
+        memcpy(buf, output, len);
+
+        free(output);
+    }
+
     // If there is data to write, write it
     if (len > 0) {
         result = write_bytes(uart_id, buf, len, type != DEBUG_MSG);
@@ -174,6 +188,43 @@ int write_packet(int uart_id, msg_type_t type, const void *buf, uint16_t len) {
     return MSG_OK;
 }
 
+int start_exchange_listener(){
+    //Create new session
+    char client_fluff[16] = {0};
+
+    write_packet(TRANSFER_INTERFACE, SESSION_MSG, &session_key, sizeof(session_key), true);
+    read_packet(TRANSFER_INTERFACE, NULL, &client_fluff, sizeof(client_fluff), true);
+
+    write_packet(TRANSFER_INTERFACE, SESSION_MSG, &session_iv, sizeof(session_iv), true);
+
+    char derived_key[16] = {0};
+    wc_HKDF(6, &session_key, sizeof(session_key), client_fluff, sizeof(client_fluff), NULL, 0, &derived_key, sizeof(derived_key));
+
+    memcpy(&session_key, &derived_key, sizeof(session_key));
+
+    return 0;
+}
+
+int start_exchange_client(){
+    //Create new session
+    char client_fluff[16] = {0};
+
+    memcpy(&client_fluff, &session_key, sizeof(client_fluff));
+    trng_get_bytes(&client_fluff, sizeof(client_fluff));
+
+    write_packet(TRANSFER_INTERFACE, SESSION_MSG, &client_fluff, sizeof(client_fluff), true);
+    read_packet(TRANSFER_INTERFACE, NULL, &session_key, sizeof(session_key), true);
+
+    read_packet(TRANSFER_INTERFACE, NULL, &session_iv, sizeof(session_iv), true);
+
+    char derived_key[16] = {0};
+    wc_HKDF(6, &session_key, sizeof(session_key), client_fluff, sizeof(client_fluff), NULL, 0, &derived_key, sizeof(derived_key));
+
+    memcpy(&session_key, &derived_key, 16);
+
+    return 0;
+}
+
 /** @brief Reads a packet from console UART.
  *
  *  @param uart_id The id of the uart where the message is to be sent
@@ -184,7 +235,7 @@ int write_packet(int uart_id, msg_type_t type, const void *buf, uint16_t len) {
  *  @return MSG_OK on success, else other msg_status_t
 */
 
-int read_packet(int uart_id, msg_type_t* cmd, void *buf, uint16_t *len) {
+int read_packet(int uart_id, msg_type_t* cmd, void *buf, uint16_t len, bool init) {
     msg_header_t header = {0};
 
     // cmd must be a valid pointer
@@ -196,15 +247,15 @@ int read_packet(int uart_id, msg_type_t* cmd, void *buf, uint16_t *len) {
 
     *cmd = header.cmd;
 
-    if(len == NULL)
-        return MSG_BAD_LEN;
+    //if(len == NULL)
+      //  return MSG_BAD_LEN;
 
     // Send ACK for the header before length validation to prevent deadlock
     if (header.cmd != ACK_MSG) {
         write_ack(uart_id);  // ACK the header
     }
 
-    if (header.len > *len) {
+    if (header.len > len) {
         return MSG_BAD_LEN;
     }
 
@@ -219,6 +270,19 @@ int read_packet(int uart_id, msg_type_t* cmd, void *buf, uint16_t *len) {
                 return MSG_NO_ACK;
             }
         }
+    }
+
+    //Conditional to decrypt data
+    if(uart_id == TRANSFER_INTERFACE && !init){
+        
+        byte* output = malloc(len);
+
+        wc_AesSetKey(&dec, &session_key, 16, &session_iv, AES_DECRYPTION);
+        wc_AesCbcDecrypt(&dec, output, buf, len);
+
+        memcpy(buf, output, len);
+
+        free(output);
     }
 
     return MSG_OK;
