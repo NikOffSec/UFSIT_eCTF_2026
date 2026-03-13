@@ -14,6 +14,7 @@
 #include "host_messaging.h"
 #include "commands.h"
 #include "filesystem.h"
+#include "simple_timer.h"
 
 /* IMPORTANT COMPONENTS FROM HSM.c */
 // extern file_t hsm_status[MAX_FILE_COUNT];
@@ -69,6 +70,7 @@ int list(uint16_t pkt_len, uint8_t *buf) {
     generate_list_files(&file_list);
 
     if (!check_pin(command->pin)) {
+        timer_wait_5s();
         print_error("Invalid pin");
         return -1;
     }
