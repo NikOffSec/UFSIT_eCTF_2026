@@ -14,6 +14,7 @@
 #include "host_messaging.h"
 #include "commands.h"
 #include "filesystem.h"
+#include "simple_timer.h"
 
 /* IMPORTANT COMPONENTS FROM HSM.c */
 // extern file_t hsm_status[MAX_FILE_COUNT];

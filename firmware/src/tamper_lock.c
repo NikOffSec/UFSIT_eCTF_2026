@@ -12,5 +12,6 @@ void enter_tamper_lock_mode(void)
         DL_GPIO_togglePins(GPIO_LEDS_PORT, GPIO_LEDS_USER_LED_1_PIN);
 #endif
         timer_wait_5s();
+        print_error("FAULT INJECTION DETECTED");
     }
 }
