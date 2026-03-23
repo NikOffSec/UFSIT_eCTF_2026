@@ -164,7 +164,10 @@ int write_packet(int uart_id, msg_type_t type, const void *buf, uint16_t len, bo
     }
 
     //Conditional to encrypt data
-    if(uart_id == TRANSFER_INTERFACE && !init){
+    /*if(uart_id == TRANSFER_INTERFACE && !init){
+
+        print_debug("Sending data:\n");
+        print_hex_debug(buf, len);
 
         byte* output = malloc(len);
 
@@ -173,8 +176,11 @@ int write_packet(int uart_id, msg_type_t type, const void *buf, uint16_t len, bo
 
         memcpy(buf, output, len);
 
+        print_debug("Sending encrypted data:\n");
+        print_hex_debug(buf, len);
+
         free(output);
-    }
+    }*/
 
     // If there is data to write, write it
     if (len > 0) {
@@ -199,8 +205,10 @@ int start_exchange_listener(){
 
     char derived_key[16] = {0};
     wc_HKDF(6, &session_key, sizeof(session_key), client_fluff, sizeof(client_fluff), NULL, 0, &derived_key, sizeof(derived_key));
+    wc_HKDF(6, &derived_key, sizeof(derived_key), AES_KEY, sizeof(AES_KEY), NULL, 0, &session_key, sizeof(session_key));
 
-    memcpy(&session_key, &derived_key, sizeof(session_key));
+    //TODO: REMOVE
+    print_hex_debug(session_key, sizeof(session_key));
 
     return 0;
 }
@@ -210,17 +218,19 @@ int start_exchange_client(){
     char client_fluff[16] = {0};
 
     memcpy(&client_fluff, &session_key, sizeof(client_fluff));
-    trng_get_bytes(&client_fluff, sizeof(client_fluff));
+    //trng_get_bytes(&client_fluff, sizeof(client_fluff));
 
-    write_packet(TRANSFER_INTERFACE, SESSION_MSG, &client_fluff, sizeof(client_fluff), true);
     read_packet(TRANSFER_INTERFACE, NULL, &session_key, sizeof(session_key), true);
+    write_packet(TRANSFER_INTERFACE, SESSION_MSG, &client_fluff, sizeof(client_fluff), true);
 
     read_packet(TRANSFER_INTERFACE, NULL, &session_iv, sizeof(session_iv), true);
 
     char derived_key[16] = {0};
     wc_HKDF(6, &session_key, sizeof(session_key), client_fluff, sizeof(client_fluff), NULL, 0, &derived_key, sizeof(derived_key));
-
-    memcpy(&session_key, &derived_key, 16);
+    wc_HKDF(6, &derived_key, sizeof(derived_key), AES_KEY, sizeof(AES_KEY), NULL, 0, &session_key, sizeof(session_key));
+    
+    //TODO: REMOVE
+    print_hex_debug(session_key, sizeof(session_key));
 
     return 0;
 }
@@ -273,7 +283,10 @@ int read_packet(int uart_id, msg_type_t* cmd, void *buf, uint16_t len, bool init
     }
 
     //Conditional to decrypt data
-    if(uart_id == TRANSFER_INTERFACE && !init){
+    /*if(uart_id == TRANSFER_INTERFACE && !init){
+
+        print_debug("Received encrypted data:\n");
+        print_hex_debug(buf, header.len);
         
         byte* output = malloc(len);
 
@@ -282,8 +295,11 @@ int read_packet(int uart_id, msg_type_t* cmd, void *buf, uint16_t len, bool init
 
         memcpy(buf, output, len);
 
+        print_debug("Decrypted data:\n");
+        print_hex_debug(buf, header.len);
+
         free(output);
-    }
+    }*/
 
     return MSG_OK;
 }

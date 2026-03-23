@@ -3,5 +3,5 @@ wolfssl (5.8.4) stable; urgency=medium
   * For a full changelog see
     https://github.com/wolfSSL/wolfssl/blob/master/ChangeLog.md
 
- -- wolfSSL <support@wolfssl.com>  Wed, 04 Mar 2026 23:43:26 -0500
+ -- wolfSSL <support@wolfssl.com>  Mon, 23 Mar 2026 15:22:46 -0400
 

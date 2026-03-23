@@ -111,9 +111,9 @@ wolfcrypt/src/src_libwolfssl_la-hash.lo: wolfcrypt/src/hash.c \
  wolfssl/wolfcrypt/sha512.h wolfssl/wolfcrypt/sha3.h \
  wolfssl/wolfcrypt/random.h wolfssl/wolfcrypt/dh.h \
  wolfssl/wolfcrypt/rsa.h wolfssl/wolfcrypt/ecc.h \
- wolfssl/wolfcrypt/ed25519.h wolfssl/wolfcrypt/asn_public.h \
- wolfssl/wolfcrypt/hmac.h wolfssl/wolfcrypt/cryptocb.h \
- wolfcrypt/src/misc.c wolfssl/wolfcrypt/misc.h
+ wolfssl/wolfcrypt/asn_public.h wolfssl/wolfcrypt/hmac.h \
+ wolfssl/wolfcrypt/cryptocb.h wolfcrypt/src/misc.c \
+ wolfssl/wolfcrypt/misc.h
 /usr/include/stdc-predef.h:
 .build_params:
 wolfssl/wolfcrypt/libwolfssl_sources.h:
@@ -248,7 +248,6 @@ wolfssl/wolfcrypt/random.h:
 wolfssl/wolfcrypt/dh.h:
 wolfssl/wolfcrypt/rsa.h:
 wolfssl/wolfcrypt/ecc.h:
-wolfssl/wolfcrypt/ed25519.h:
 wolfssl/wolfcrypt/asn_public.h:
 wolfssl/wolfcrypt/hmac.h:
 wolfssl/wolfcrypt/cryptocb.h:

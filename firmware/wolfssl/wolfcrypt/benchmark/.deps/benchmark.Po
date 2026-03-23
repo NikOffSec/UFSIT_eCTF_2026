@@ -108,8 +108,7 @@ wolfcrypt/benchmark/benchmark.o: wolfcrypt/benchmark/benchmark.c \
  wolfssl/wolfcrypt/sha512.h wolfssl/wolfcrypt/sha3.h \
  wolfssl/wolfcrypt/random.h wolfssl/wolfcrypt/error-crypt.h \
  wolfssl/wolfcrypt/asn.h wolfssl/wolfcrypt/dh.h wolfssl/wolfcrypt/rsa.h \
- wolfssl/wolfcrypt/ecc.h wolfssl/wolfcrypt/ed25519.h \
- wolfssl/wolfcrypt/asn_public.h wolfssl/version.h \
+ wolfssl/wolfcrypt/ecc.h wolfssl/wolfcrypt/asn_public.h wolfssl/version.h \
  wolfssl/wolfcrypt/chacha.h wolfssl/wolfcrypt/poly1305.h \
  wolfssl/wolfcrypt/chacha20_poly1305.h wolfssl/wolfcrypt/aes.h \
  wolfssl/wolfcrypt/hmac.h wolfssl/wolfcrypt/kdf.h \
@@ -253,7 +252,6 @@ wolfssl/wolfcrypt/asn.h:
 wolfssl/wolfcrypt/dh.h:
 wolfssl/wolfcrypt/rsa.h:
 wolfssl/wolfcrypt/ecc.h:
-wolfssl/wolfcrypt/ed25519.h:
 wolfssl/wolfcrypt/asn_public.h:
 wolfssl/version.h:
 wolfssl/wolfcrypt/chacha.h:

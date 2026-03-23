@@ -114,18 +114,18 @@ wolfcrypt/test/tests_unit_test-test.o: wolfcrypt/test/test.c \
  wolfssl/wolfcrypt/asn.h wolfssl/wolfcrypt/wolfmath.h \
  wolfssl/wolfcrypt/sp_int.h wolfssl/wolfcrypt/random.h \
  wolfssl/wolfcrypt/dh.h wolfssl/wolfcrypt/rsa.h wolfssl/wolfcrypt/ecc.h \
- wolfssl/wolfcrypt/ed25519.h wolfssl/wolfcrypt/asn_public.h \
- wolfssl/wolfcrypt/md2.h wolfssl/wolfcrypt/md5.h wolfssl/wolfcrypt/md4.h \
- wolfssl/wolfcrypt/rc2.h wolfssl/wolfcrypt/arc4.h \
- wolfssl/wolfcrypt/coding.h wolfssl/wolfcrypt/signature.h \
- wolfssl/wolfcrypt/des3.h wolfssl/wolfcrypt/aes.h \
- wolfssl/wolfcrypt/wc_encrypt.h wolfssl/wolfcrypt/chacha.h \
- wolfssl/wolfcrypt/cmac.h wolfssl/wolfcrypt/siphash.h \
- wolfssl/wolfcrypt/poly1305.h wolfssl/wolfcrypt/camellia.h \
- wolfssl/wolfcrypt/hmac.h wolfssl/wolfcrypt/kdf.h wolfssl/wolfcrypt/dsa.h \
- wolfssl/wolfcrypt/srp.h wolfssl/wolfcrypt/chacha20_poly1305.h \
- wolfssl/wolfcrypt/pwdbased.h wolfssl/wolfcrypt/ripemd.h \
- wolfssl/wolfcrypt/pkcs12.h wolfssl/certs_test.h
+ wolfssl/wolfcrypt/asn_public.h wolfssl/wolfcrypt/md2.h \
+ wolfssl/wolfcrypt/md5.h wolfssl/wolfcrypt/md4.h wolfssl/wolfcrypt/rc2.h \
+ wolfssl/wolfcrypt/arc4.h wolfssl/wolfcrypt/coding.h \
+ wolfssl/wolfcrypt/signature.h wolfssl/wolfcrypt/des3.h \
+ wolfssl/wolfcrypt/aes.h wolfssl/wolfcrypt/wc_encrypt.h \
+ wolfssl/wolfcrypt/chacha.h wolfssl/wolfcrypt/cmac.h \
+ wolfssl/wolfcrypt/siphash.h wolfssl/wolfcrypt/poly1305.h \
+ wolfssl/wolfcrypt/camellia.h wolfssl/wolfcrypt/hmac.h \
+ wolfssl/wolfcrypt/kdf.h wolfssl/wolfcrypt/dsa.h wolfssl/wolfcrypt/srp.h \
+ wolfssl/wolfcrypt/chacha20_poly1305.h wolfssl/wolfcrypt/pwdbased.h \
+ wolfssl/wolfcrypt/ripemd.h wolfssl/wolfcrypt/pkcs12.h \
+ wolfssl/certs_test.h
 /usr/include/stdc-predef.h:
 .build_params:
 config.h:
@@ -272,7 +272,6 @@ wolfssl/wolfcrypt/random.h:
 wolfssl/wolfcrypt/dh.h:
 wolfssl/wolfcrypt/rsa.h:
 wolfssl/wolfcrypt/ecc.h:
-wolfssl/wolfcrypt/ed25519.h:
 wolfssl/wolfcrypt/asn_public.h:
 wolfssl/wolfcrypt/md2.h:
 wolfssl/wolfcrypt/md5.h:

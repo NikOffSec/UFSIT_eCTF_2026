@@ -979,7 +979,7 @@ am__append_28 = src/libwolfssl.la
 ###am__append_164 = wolfcrypt/src/curve448.c
 ###am__append_165 = wolfcrypt/src/ed448.c
 ###am__append_166 = wolfcrypt/src/curve25519.c
-##am__append_167 = wolfcrypt/src/ed25519.c
+###am__append_167 = wolfcrypt/src/ed25519.c
 #####am__append_168 = wolfcrypt/src/port/arm/armv8-32-curve25519_c.c \
 #####	wolfcrypt/src/port/arm/armv8-curve25519_c.c
 ####am__append_169 = wolfcrypt/src/port/arm/armv8-32-curve25519.S \
@@ -1179,22 +1179,22 @@ am__append_312 = wolfcrypt/src/ecc.c
 #am__append_326 = wolfcrypt/src/wc_xmss.c \
 #	wolfcrypt/src/wc_xmss_impl.c
 #am__append_327 = wolfcrypt/src/curve25519.c
-am__append_328 = wolfcrypt/src/ed25519.c
-am__append_329 = wolfcrypt/src/fe_low_mem.c \
-	wolfcrypt/src/ge_operations.c
-#am__append_330 = wolfcrypt/src/fe_x25519_asm.S
-####am__append_331 = wolfcrypt/src/port/arm/armv8-32-curve25519_c.c
-####am__append_332 = wolfcrypt/src/port/arm/armv8-curve25519_c.c
-###am__append_333 = wolfcrypt/src/port/arm/armv8-32-curve25519.S
-###am__append_334 = wolfcrypt/src/port/arm/armv8-curve25519.S
-###am__append_335 = wolfcrypt/src/port/arm/armv8-32-curve25519_c.c
-###am__append_336 = wolfcrypt/src/port/arm/armv8-curve25519_c.c
-###am__append_337 = wolfcrypt/src/port/arm/thumb2-curve25519_c.c
-##am__append_338 = wolfcrypt/src/port/arm/armv8-32-curve25519.S
-##am__append_339 = wolfcrypt/src/port/arm/armv8-curve25519.S
-##am__append_340 = wolfcrypt/src/port/arm/thumb2-curve25519.S
-am__append_341 = wolfcrypt/src/fe_operations.c
-am__append_342 = wolfcrypt/src/ge_low_mem.c
+#am__append_328 = wolfcrypt/src/ed25519.c
+#am__append_329 = wolfcrypt/src/fe_low_mem.c \
+#	wolfcrypt/src/ge_operations.c
+##am__append_330 = wolfcrypt/src/fe_x25519_asm.S
+#####am__append_331 = wolfcrypt/src/port/arm/armv8-32-curve25519_c.c
+#####am__append_332 = wolfcrypt/src/port/arm/armv8-curve25519_c.c
+####am__append_333 = wolfcrypt/src/port/arm/armv8-32-curve25519.S
+####am__append_334 = wolfcrypt/src/port/arm/armv8-curve25519.S
+####am__append_335 = wolfcrypt/src/port/arm/armv8-32-curve25519_c.c
+####am__append_336 = wolfcrypt/src/port/arm/armv8-curve25519_c.c
+####am__append_337 = wolfcrypt/src/port/arm/thumb2-curve25519_c.c
+###am__append_338 = wolfcrypt/src/port/arm/armv8-32-curve25519.S
+###am__append_339 = wolfcrypt/src/port/arm/armv8-curve25519.S
+###am__append_340 = wolfcrypt/src/port/arm/thumb2-curve25519.S
+#am__append_341 = wolfcrypt/src/fe_operations.c
+#am__append_342 = wolfcrypt/src/ge_low_mem.c
 #am__append_343 = wolfcrypt/src/ge_operations.c
 ##am__append_344 = wolfcrypt/src/fe_x25519_asm.S
 ####am__append_345 = wolfcrypt/src/port/arm/armv8-curve25519_c.c
@@ -2736,7 +2736,7 @@ am__objects_50 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-sha256-asm.lo
 ###am__objects_144 = wolfcrypt/src/src_libwolfssl_la-curve448.lo
 ###am__objects_145 = wolfcrypt/src/src_libwolfssl_la-ed448.lo
 ###am__objects_146 = wolfcrypt/src/src_libwolfssl_la-curve25519.lo
-##am__objects_147 = wolfcrypt/src/src_libwolfssl_la-ed25519.lo
+###am__objects_147 = wolfcrypt/src/src_libwolfssl_la-ed25519.lo
 #####am__objects_148 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-32-curve25519_c.lo \
 #####	wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-curve25519_c.lo
 ####am__objects_149 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-32-curve25519.lo \
@@ -2923,22 +2923,22 @@ am__objects_292 = wolfcrypt/src/src_libwolfssl_la-ecc.lo
 #am__objects_306 = wolfcrypt/src/src_libwolfssl_la-wc_xmss.lo \
 #	wolfcrypt/src/src_libwolfssl_la-wc_xmss_impl.lo
 #am__objects_307 = wolfcrypt/src/src_libwolfssl_la-curve25519.lo
-am__objects_308 = wolfcrypt/src/src_libwolfssl_la-ed25519.lo
-am__objects_309 = wolfcrypt/src/src_libwolfssl_la-fe_low_mem.lo \
-	wolfcrypt/src/src_libwolfssl_la-ge_operations.lo
-#am__objects_310 = wolfcrypt/src/src_libwolfssl_la-fe_x25519_asm.lo
-####am__objects_311 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-32-curve25519_c.lo
-####am__objects_312 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-curve25519_c.lo
-###am__objects_313 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-32-curve25519.lo
-###am__objects_314 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-curve25519.lo
-###am__objects_315 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-32-curve25519_c.lo
-###am__objects_316 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-curve25519_c.lo
-###am__objects_317 = wolfcrypt/src/port/arm/src_libwolfssl_la-thumb2-curve25519_c.lo
-##am__objects_318 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-32-curve25519.lo
-##am__objects_319 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-curve25519.lo
-##am__objects_320 = wolfcrypt/src/port/arm/src_libwolfssl_la-thumb2-curve25519.lo
-am__objects_321 = wolfcrypt/src/src_libwolfssl_la-fe_operations.lo
-am__objects_322 = wolfcrypt/src/src_libwolfssl_la-ge_low_mem.lo
+#am__objects_308 = wolfcrypt/src/src_libwolfssl_la-ed25519.lo
+#am__objects_309 = wolfcrypt/src/src_libwolfssl_la-fe_low_mem.lo \
+#	wolfcrypt/src/src_libwolfssl_la-ge_operations.lo
+##am__objects_310 = wolfcrypt/src/src_libwolfssl_la-fe_x25519_asm.lo
+#####am__objects_311 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-32-curve25519_c.lo
+#####am__objects_312 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-curve25519_c.lo
+####am__objects_313 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-32-curve25519.lo
+####am__objects_314 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-curve25519.lo
+####am__objects_315 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-32-curve25519_c.lo
+####am__objects_316 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-curve25519_c.lo
+####am__objects_317 = wolfcrypt/src/port/arm/src_libwolfssl_la-thumb2-curve25519_c.lo
+###am__objects_318 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-32-curve25519.lo
+###am__objects_319 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-curve25519.lo
+###am__objects_320 = wolfcrypt/src/port/arm/src_libwolfssl_la-thumb2-curve25519.lo
+#am__objects_321 = wolfcrypt/src/src_libwolfssl_la-fe_operations.lo
+#am__objects_322 = wolfcrypt/src/src_libwolfssl_la-ge_low_mem.lo
 #am__objects_323 = wolfcrypt/src/src_libwolfssl_la-ge_operations.lo
 ##am__objects_324 = wolfcrypt/src/src_libwolfssl_la-fe_x25519_asm.lo
 ####am__objects_325 = wolfcrypt/src/port/arm/src_libwolfssl_la-armv8-curve25519_c.lo
@@ -4443,8 +4443,8 @@ distcleancheck_listfiles = \
 ACLOCAL = ${SHELL} '/home/ectf/UFSIT_eCTF_2026/firmware/wolfssl/build-aux/missing' aclocal-1.18
 AMINCLUDE = aminclude.am
 AMTAR = $${TAR-tar}
-AM_CCASFLAGS =  -DNDEBUG -DWOLFSSL_PPC32_ASM -DHAVE_CHACHA -DHAVE_ED25519  $(EXTRA_CCASFLAGS)
-AM_CFLAGS =  -fvisibility=hidden -DHAVE_C___ATOMIC=1 -DHAVE_THREAD_LS -DNDEBUG -DNO_DO178 -DWOLFSSL_ASN_TEMPLATE -pthread -DERROR_QUEUE_PER_THREAD -DTFM_TIMING_RESISTANT -DECC_TIMING_RESISTANT -DWC_RSA_BLINDING -DWOLFSSL_ARMASM_NO_HW_CRYPTO -DWOLFSSL_USE_ALIGN -DWOLFSSL_SHA224 -DWOLFSSL_SHA512 -DWOLFSSL_SHA384 -DHAVE_HKDF -DNO_DSA -DHAVE_ECC -DECC_SHAMIR -DECC_MIN_KEY_SZ=224 -DNO_OLD_TLS -DWC_RSA_PSS -DWOLFSSL_PSS_LONG_SALT -DWOLFSSL_ASN_PRINT -DWOLFSSL_SHA3 -DWOLFSSL_NO_SHAKE128 -DWOLFSSL_NO_SHAKE256 -DHAVE_POLY1305 -DHAVE_CHACHA -DHAVE_HASHDRBG -DHAVE_TLS_EXTENSIONS -DHAVE_SNI -DHAVE_TLS_EXTENSIONS -DHAVE_SUPPORTED_CURVES -DHAVE_FFDHE_2048 -DHAVE_SUPPORTED_CURVES -DWOLFSSL_TLS13 -DHAVE_TLS_EXTENSIONS -DHAVE_EXTENDED_MASTER -DNO_RC4 -DHAVE_ENCRYPT_THEN_MAC -DNO_PSK -DNO_MD4 -DWOLFSSL_SP_MATH_ALL -DWOLFSSL_SP_ARM64 -DWOLFSSL_AARCH64_BUILD -DWC_NO_ASYNC_THREADING -DHAVE_DH_DEFAULT_PARAMS -DHAVE_ED25519 -DWOLFSSL_SYS_CA_CERTS -DNO_MD5 -DNO_OLD_TLS -DNO_DES3 -DNO_DES3_TLS_SUITES -DGCM_TABLE_4BIT -DHAVE_AESGCM -DHAVE_TLS_EXTENSIONS -DHAVE_SERVER_RENEGOTIATION_INFO -Wall -Wno-unused -O2  -DHAVE___UINT128_T=1 -DHAVE_GETPID=1 -DHAVE_WC_INTROSPECTION -include ./.build_params  $(EXTRA_CFLAGS)
+AM_CCASFLAGS =  -DNDEBUG -DWOLFSSL_PPC32_ASM -DHAVE_CHACHA  $(EXTRA_CCASFLAGS)
+AM_CFLAGS =  -fvisibility=hidden -DHAVE_C___ATOMIC=1 -DHAVE_THREAD_LS -DNDEBUG -DNO_DO178 -DWOLFSSL_ASN_TEMPLATE -pthread -DERROR_QUEUE_PER_THREAD -DTFM_TIMING_RESISTANT -DECC_TIMING_RESISTANT -DWC_RSA_BLINDING -DWOLFSSL_ARMASM_NO_HW_CRYPTO -DWOLFSSL_USE_ALIGN -DWOLFSSL_SHA224 -DWOLFSSL_SHA512 -DWOLFSSL_SHA384 -DHAVE_HKDF -DNO_DSA -DHAVE_ECC -DECC_SHAMIR -DECC_MIN_KEY_SZ=224 -DNO_OLD_TLS -DWC_RSA_PSS -DWOLFSSL_PSS_LONG_SALT -DWOLFSSL_ASN_PRINT -DWOLFSSL_SHA3 -DWOLFSSL_NO_SHAKE128 -DWOLFSSL_NO_SHAKE256 -DHAVE_POLY1305 -DHAVE_CHACHA -DHAVE_HASHDRBG -DHAVE_TLS_EXTENSIONS -DHAVE_SNI -DHAVE_TLS_EXTENSIONS -DHAVE_SUPPORTED_CURVES -DHAVE_FFDHE_2048 -DHAVE_SUPPORTED_CURVES -DWOLFSSL_TLS13 -DHAVE_TLS_EXTENSIONS -DHAVE_EXTENDED_MASTER -DNO_RC4 -DHAVE_ENCRYPT_THEN_MAC -DNO_PSK -DNO_MD4 -DWOLFSSL_SP_MATH_ALL -DWOLFSSL_SP_ARM64 -DWOLFSSL_AARCH64_BUILD -DWC_NO_ASYNC_THREADING -DHAVE_DH_DEFAULT_PARAMS -DWOLFSSL_SYS_CA_CERTS -DNO_MD5 -DNO_OLD_TLS -DNO_DES3 -DNO_DES3_TLS_SUITES -DGCM_TABLE_4BIT -DHAVE_AESGCM -DHAVE_TLS_EXTENSIONS -DHAVE_SERVER_RENEGOTIATION_INFO -Wall -Wno-unused -O2  -DHAVE___UINT128_T=1 -DHAVE_GETPID=1 -DHAVE_WC_INTROSPECTION -include ./.build_params  $(EXTRA_CFLAGS)
 
 # allow supplementary or override flags to be passed at make time:
 AM_CPPFLAGS =  -DWOLFSSL_HAVE_ATOMIC_H -DWOLFSSL_HAVE_ASSERT_H  $(EXTRA_CPPFLAGS)
@@ -4474,7 +4474,7 @@ CFLAGS_FPU_ENABLE =
 CFLAGS_SIMD_DISABLE = 
 CFLAGS_SIMD_ENABLE = 
 CFLAG_VISIBILITY = -fvisibility=hidden
-CONFIGURE_OPTIONS =  '--enable-ed25519'
+CONFIGURE_OPTIONS = 
 CPP = gcc -E
 CPPFLAGS = 
 CSCOPE = cscope
@@ -4572,8 +4572,8 @@ STRIP = strip
 VERSION = 5.8.4
 WOLFSENTRY_INCLUDE = 
 WOLFSENTRY_LIB = 
-WOLFSSL_BUILD_DATE = Wed, 04 Mar 2026 23:43:26 -0500
-WOLFSSL_CONFIG_ARGS =  '--enable-ed25519'
+WOLFSSL_BUILD_DATE = Mon, 23 Mar 2026 15:22:46 -0400
+WOLFSSL_CONFIG_ARGS = 
 WOLFSSL_HAVE_PTHREAD = 1
 WOLFSSL_INCLUDEDIR_ABS = /usr/local/include
 WOLFSSL_LIBDIR_ABS = /usr/local/lib

@@ -138,17 +138,16 @@ src/libwolfssl_la-ssl.lo: src/ssl.c /usr/include/stdc-predef.h \
  wolfssl/wolfcrypt/sp_int.h wolfssl/wolfcrypt/hash.h \
  wolfssl/wolfcrypt/sha.h wolfssl/wolfcrypt/sha512.h \
  wolfssl/wolfcrypt/sha3.h wolfssl/wolfcrypt/dh.h wolfssl/wolfcrypt/rsa.h \
- wolfssl/wolfcrypt/ecc.h wolfssl/wolfcrypt/ed25519.h \
- wolfssl/wolfcrypt/aes.h wolfssl/wolfcrypt/poly1305.h \
- wolfssl/wolfcrypt/hmac.h wolfssl/wolfcrypt/kdf.h \
- wolfssl/wolfcrypt/chacha20_poly1305.h wolfssl/wolfcrypt/wc_encrypt.h \
- wolfssl/wolfcrypt/hpke.h wolfssl/wolfcrypt/coding.h wolfcrypt/src/misc.c \
- wolfssl/wolfcrypt/misc.h src/ssl_misc.c wolfcrypt/src/evp.c \
- src/ssl_crypto.c src/ssl_certman.c src/ssl_sess.c src/ssl_api_cert.c \
- src/ssl_api_pk.c src/ssl_bn.c src/ssl_asn1.c src/pk.c src/pk_rsa.c \
- src/pk_ec.c wolfcrypt/src/evp_pk.c src/ssl_sk.c src/ssl_ech.c \
- src/ssl_load.c src/ssl_api_crl_ocsp.c src/x509.c src/conf.c \
- src/x509_str.c src/ssl_p7p12.c
+ wolfssl/wolfcrypt/ecc.h wolfssl/wolfcrypt/aes.h \
+ wolfssl/wolfcrypt/poly1305.h wolfssl/wolfcrypt/hmac.h \
+ wolfssl/wolfcrypt/kdf.h wolfssl/wolfcrypt/chacha20_poly1305.h \
+ wolfssl/wolfcrypt/wc_encrypt.h wolfssl/wolfcrypt/hpke.h \
+ wolfssl/wolfcrypt/coding.h wolfcrypt/src/misc.c wolfssl/wolfcrypt/misc.h \
+ src/ssl_misc.c wolfcrypt/src/evp.c src/ssl_crypto.c src/ssl_certman.c \
+ src/ssl_sess.c src/ssl_api_cert.c src/ssl_api_pk.c src/ssl_bn.c \
+ src/ssl_asn1.c src/pk.c src/pk_rsa.c src/pk_ec.c wolfcrypt/src/evp_pk.c \
+ src/ssl_sk.c src/ssl_ech.c src/ssl_load.c src/ssl_api_crl_ocsp.c \
+ src/x509.c src/conf.c src/x509_str.c src/ssl_p7p12.c
 /usr/include/stdc-predef.h:
 .build_params:
 wolfssl/wolfcrypt/libwolfssl_sources.h:
@@ -325,7 +324,6 @@ wolfssl/wolfcrypt/sha3.h:
 wolfssl/wolfcrypt/dh.h:
 wolfssl/wolfcrypt/rsa.h:
 wolfssl/wolfcrypt/ecc.h:
-wolfssl/wolfcrypt/ed25519.h:
 wolfssl/wolfcrypt/aes.h:
 wolfssl/wolfcrypt/poly1305.h:
 wolfssl/wolfcrypt/hmac.h:

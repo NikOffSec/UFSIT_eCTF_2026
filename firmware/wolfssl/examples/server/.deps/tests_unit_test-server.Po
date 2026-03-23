@@ -143,18 +143,17 @@ examples/server/tests_unit_test-server.o: examples/server/server.c \
  wolfssl/openssl/tls1.h wolfssl/openssl/evp.h wolfssl/openssl/sha.h \
  wolfssl/openssl/sha3.h wolfssl/openssl/ripemd.h wolfssl/openssl/dsa.h \
  wolfssl/openssl/ec.h wolfssl/wolfcrypt/asn.h wolfssl/wolfcrypt/dh.h \
- wolfssl/wolfcrypt/ecc.h wolfssl/wolfcrypt/ed25519.h wolfssl/openssl/dh.h \
- wolfssl/wolfcrypt/aes.h wolfssl/wolfcrypt/des3.h \
- wolfssl/wolfcrypt/arc4.h wolfssl/wolfcrypt/chacha20_poly1305.h \
- wolfssl/wolfcrypt/chacha.h wolfssl/wolfcrypt/poly1305.h \
- wolfssl/wolfcrypt/pwdbased.h wolfssl/wolfcrypt/coding.h \
- wolfssl/openssl/objects.h wolfssl/openssl/obj_mac.h \
- wolfssl/openssl/bio.h wolfssl/openssl/x509.h wolfssl/openssl/crypto.h \
- wolfssl/openssl/conf.h wolfssl/openssl/ecdsa.h wolfssl/openssl/pkcs7.h \
- wolfssl/wolfcrypt/pkcs7.h wolfssl/test.h wolfssl/wolfcrypt/mem_track.h \
- /usr/include/netdb.h /usr/include/rpc/netdb.h \
- /usr/include/aarch64-linux-gnu/bits/netdb.h /usr/include/netinet/tcp.h \
- /usr/include/aarch64-linux-gnu/sys/ioctl.h \
+ wolfssl/wolfcrypt/ecc.h wolfssl/openssl/dh.h wolfssl/wolfcrypt/aes.h \
+ wolfssl/wolfcrypt/des3.h wolfssl/wolfcrypt/arc4.h \
+ wolfssl/wolfcrypt/chacha20_poly1305.h wolfssl/wolfcrypt/chacha.h \
+ wolfssl/wolfcrypt/poly1305.h wolfssl/wolfcrypt/pwdbased.h \
+ wolfssl/wolfcrypt/coding.h wolfssl/openssl/objects.h \
+ wolfssl/openssl/obj_mac.h wolfssl/openssl/bio.h wolfssl/openssl/x509.h \
+ wolfssl/openssl/crypto.h wolfssl/openssl/conf.h wolfssl/openssl/ecdsa.h \
+ wolfssl/openssl/pkcs7.h wolfssl/wolfcrypt/pkcs7.h wolfssl/test.h \
+ wolfssl/wolfcrypt/mem_track.h /usr/include/netdb.h \
+ /usr/include/rpc/netdb.h /usr/include/aarch64-linux-gnu/bits/netdb.h \
+ /usr/include/netinet/tcp.h /usr/include/aarch64-linux-gnu/sys/ioctl.h \
  /usr/include/aarch64-linux-gnu/bits/ioctls.h \
  /usr/include/aarch64-linux-gnu/asm/ioctls.h \
  /usr/include/asm-generic/ioctls.h /usr/include/linux/ioctl.h \
@@ -383,7 +382,6 @@ wolfssl/openssl/ec.h:
 wolfssl/wolfcrypt/asn.h:
 wolfssl/wolfcrypt/dh.h:
 wolfssl/wolfcrypt/ecc.h:
-wolfssl/wolfcrypt/ed25519.h:
 wolfssl/openssl/dh.h:
 wolfssl/wolfcrypt/aes.h:
 wolfssl/wolfcrypt/des3.h:

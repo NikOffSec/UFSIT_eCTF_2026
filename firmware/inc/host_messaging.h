@@ -21,6 +21,8 @@
 #include "simple_uart.h"
 #include "wolfssl/wolfcrypt/aes.h"
 #include "wolfssl/wolfcrypt/sha256.h"
+#include "wolfssl/wolfcrypt/kdf.h"
+#include "secrets.h"
 
 //Global session key; should be randomized upon every new session start.
 static byte session_key[16] = {0};

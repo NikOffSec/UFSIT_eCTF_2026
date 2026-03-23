@@ -138,11 +138,11 @@ src/libwolfssl_la-wolfio.lo: src/wolfio.c /usr/include/stdc-predef.h \
  wolfssl/wolfcrypt/sp_int.h wolfssl/wolfcrypt/hash.h \
  wolfssl/wolfcrypt/sha.h wolfssl/wolfcrypt/sha512.h \
  wolfssl/wolfcrypt/sha3.h wolfssl/wolfcrypt/dh.h wolfssl/wolfcrypt/rsa.h \
- wolfssl/wolfcrypt/ecc.h wolfssl/wolfcrypt/ed25519.h \
- wolfssl/wolfcrypt/aes.h wolfssl/wolfcrypt/poly1305.h \
- wolfssl/wolfcrypt/hmac.h wolfssl/wolfcrypt/kdf.h \
- wolfssl/wolfcrypt/chacha20_poly1305.h wolfssl/wolfcrypt/wc_encrypt.h \
- wolfssl/wolfcrypt/hpke.h /usr/include/netdb.h /usr/include/rpc/netdb.h \
+ wolfssl/wolfcrypt/ecc.h wolfssl/wolfcrypt/aes.h \
+ wolfssl/wolfcrypt/poly1305.h wolfssl/wolfcrypt/hmac.h \
+ wolfssl/wolfcrypt/kdf.h wolfssl/wolfcrypt/chacha20_poly1305.h \
+ wolfssl/wolfcrypt/wc_encrypt.h wolfssl/wolfcrypt/hpke.h \
+ /usr/include/netdb.h /usr/include/rpc/netdb.h \
  /usr/include/aarch64-linux-gnu/bits/netdb.h \
  /usr/include/aarch64-linux-gnu/sys/ioctl.h \
  /usr/include/aarch64-linux-gnu/bits/ioctls.h \
@@ -328,7 +328,6 @@ wolfssl/wolfcrypt/sha3.h:
 wolfssl/wolfcrypt/dh.h:
 wolfssl/wolfcrypt/rsa.h:
 wolfssl/wolfcrypt/ecc.h:
-wolfssl/wolfcrypt/ed25519.h:
 wolfssl/wolfcrypt/aes.h:
 wolfssl/wolfcrypt/poly1305.h:
 wolfssl/wolfcrypt/hmac.h:

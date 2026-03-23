@@ -228,6 +228,8 @@ int interrogate(uint16_t pkt_len, uint8_t *buf) {
     list_response_t final_list_buf = {0};
     uint16_t len_recv_msg;
 
+    start_exchange_client();
+
     // pin check
     if (!check_pin(command->pin)) {
         print_error("Invalid pin");

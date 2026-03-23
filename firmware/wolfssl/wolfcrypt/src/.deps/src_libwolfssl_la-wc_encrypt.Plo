@@ -114,9 +114,9 @@ wolfcrypt/src/src_libwolfssl_la-wc_encrypt.lo: wolfcrypt/src/wc_encrypt.c \
  wolfssl/wolfcrypt/asn.h wolfssl/wolfcrypt/wolfmath.h \
  wolfssl/wolfcrypt/sp_int.h wolfssl/wolfcrypt/dh.h \
  wolfssl/wolfcrypt/rsa.h wolfssl/wolfcrypt/ecc.h \
- wolfssl/wolfcrypt/ed25519.h wolfssl/wolfcrypt/asn_public.h \
- wolfssl/wolfcrypt/coding.h wolfssl/wolfcrypt/pwdbased.h \
- wolfcrypt/src/misc.c wolfssl/wolfcrypt/misc.h
+ wolfssl/wolfcrypt/asn_public.h wolfssl/wolfcrypt/coding.h \
+ wolfssl/wolfcrypt/pwdbased.h wolfcrypt/src/misc.c \
+ wolfssl/wolfcrypt/misc.h
 /usr/include/stdc-predef.h:
 .build_params:
 wolfssl/wolfcrypt/libwolfssl_sources.h:
@@ -257,7 +257,6 @@ wolfssl/wolfcrypt/sp_int.h:
 wolfssl/wolfcrypt/dh.h:
 wolfssl/wolfcrypt/rsa.h:
 wolfssl/wolfcrypt/ecc.h:
-wolfssl/wolfcrypt/ed25519.h:
 wolfssl/wolfcrypt/asn_public.h:
 wolfssl/wolfcrypt/coding.h:
 wolfssl/wolfcrypt/pwdbased.h:

@@ -138,8 +138,7 @@ examples/echoserver/testsuite_testsuite_test-echoserver.o: \
  wolfssl/wolfcrypt/hash.h wolfssl/wolfcrypt/sha.h \
  wolfssl/wolfcrypt/sha512.h wolfssl/wolfcrypt/sha3.h wolfssl/test.h \
  wolfssl/wolfcrypt/mem_track.h wolfssl/wolfcrypt/asn.h \
- wolfssl/wolfcrypt/dh.h wolfssl/wolfcrypt/rsa.h \
- wolfssl/wolfcrypt/ed25519.h /usr/include/netdb.h \
+ wolfssl/wolfcrypt/dh.h wolfssl/wolfcrypt/rsa.h /usr/include/netdb.h \
  /usr/include/rpc/netdb.h /usr/include/aarch64-linux-gnu/bits/netdb.h \
  /usr/include/netinet/tcp.h /usr/include/aarch64-linux-gnu/sys/ioctl.h \
  /usr/include/aarch64-linux-gnu/bits/ioctls.h \
@@ -356,7 +355,6 @@ wolfssl/wolfcrypt/mem_track.h:
 wolfssl/wolfcrypt/asn.h:
 wolfssl/wolfcrypt/dh.h:
 wolfssl/wolfcrypt/rsa.h:
-wolfssl/wolfcrypt/ed25519.h:
 /usr/include/netdb.h:
 /usr/include/rpc/netdb.h:
 /usr/include/aarch64-linux-gnu/bits/netdb.h:

@@ -2,7 +2,7 @@
 
 # Store the configure options and CFLAGS used during ./configure
 # This file is generated from rules.in by the configure script
-CONFIGURE_OPTIONS =  '--enable-ed25519'
+CONFIGURE_OPTIONS = 
 ENABLED_FIPS = no
 
 # Use debhelper with automatic sequence

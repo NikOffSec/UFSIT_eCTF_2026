@@ -80,6 +80,11 @@ OBJECTS += $(WOLFSSL_INC)/aes.o
 OBJECTS += $(WOLFSSL_INC)/error.o
 OBJECTS += $(WOLFSSL_INC)/wc_port.o
 OBJECTS += $(WOLFSSL_INC)/misc.o
+
+# Required for HKDF
+OBJECTS += $(WOLFSSL_INC)/kdf.o
+OBJECTS += $(WOLFSSL_INC)/hmac.o
+OBJECTS += $(WOLFSSL_INC)/sha256.o
 endif
 
 NAME = hsm

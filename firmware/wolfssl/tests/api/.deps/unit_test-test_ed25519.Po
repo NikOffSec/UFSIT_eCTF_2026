@@ -139,9 +139,9 @@ tests/api/unit_test-test_ed25519.o: tests/api/test_ed25519.c \
  wolfssl/wolfcrypt/hash.h wolfssl/wolfcrypt/sha.h \
  wolfssl/wolfcrypt/sha512.h wolfssl/wolfcrypt/sha3.h \
  wolfssl/wolfcrypt/dh.h wolfssl/wolfcrypt/rsa.h wolfssl/wolfcrypt/ecc.h \
- wolfssl/wolfcrypt/ed25519.h /usr/include/netdb.h \
- /usr/include/rpc/netdb.h /usr/include/aarch64-linux-gnu/bits/netdb.h \
- /usr/include/netinet/tcp.h /usr/include/aarch64-linux-gnu/sys/ioctl.h \
+ /usr/include/netdb.h /usr/include/rpc/netdb.h \
+ /usr/include/aarch64-linux-gnu/bits/netdb.h /usr/include/netinet/tcp.h \
+ /usr/include/aarch64-linux-gnu/sys/ioctl.h \
  /usr/include/aarch64-linux-gnu/bits/ioctls.h \
  /usr/include/aarch64-linux-gnu/asm/ioctls.h \
  /usr/include/asm-generic/ioctls.h /usr/include/linux/ioctl.h \
@@ -179,8 +179,8 @@ tests/api/unit_test-test_ed25519.o: tests/api/test_ed25519.c \
  /usr/include/aarch64-linux-gnu/bits/types/struct_sigstack.h \
  /usr/include/aarch64-linux-gnu/bits/sigthread.h \
  /usr/include/aarch64-linux-gnu/bits/signal_ext.h wolfcrypt/src/misc.c \
- wolfssl/wolfcrypt/misc.h tests/api/api.h wolfssl/certs_test.h \
- tests/api/test_ed25519.h tests/api/api_decl.h
+ wolfssl/wolfcrypt/misc.h wolfssl/wolfcrypt/ed25519.h tests/api/api.h \
+ wolfssl/certs_test.h tests/api/test_ed25519.h tests/api/api_decl.h
 /usr/include/stdc-predef.h:
 .build_params:
 tests/unit.h:
@@ -358,7 +358,6 @@ wolfssl/wolfcrypt/sha3.h:
 wolfssl/wolfcrypt/dh.h:
 wolfssl/wolfcrypt/rsa.h:
 wolfssl/wolfcrypt/ecc.h:
-wolfssl/wolfcrypt/ed25519.h:
 /usr/include/netdb.h:
 /usr/include/rpc/netdb.h:
 /usr/include/aarch64-linux-gnu/bits/netdb.h:
@@ -407,6 +406,7 @@ wolfssl/wolfcrypt/ed25519.h:
 /usr/include/aarch64-linux-gnu/bits/signal_ext.h:
 wolfcrypt/src/misc.c:
 wolfssl/wolfcrypt/misc.h:
+wolfssl/wolfcrypt/ed25519.h:
 tests/api/api.h:
 wolfssl/certs_test.h:
 tests/api/test_ed25519.h:

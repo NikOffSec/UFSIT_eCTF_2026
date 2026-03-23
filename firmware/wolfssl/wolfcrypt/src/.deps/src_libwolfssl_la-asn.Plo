@@ -111,10 +111,10 @@ wolfcrypt/src/src_libwolfssl_la-asn.lo: wolfcrypt/src/asn.c \
  wolfssl/wolfcrypt/sha512.h wolfssl/wolfcrypt/sha3.h \
  wolfssl/wolfcrypt/random.h wolfssl/wolfcrypt/asn.h \
  wolfssl/wolfcrypt/dh.h wolfssl/wolfcrypt/ecc.h \
- wolfssl/wolfcrypt/ed25519.h wolfssl/wolfcrypt/asn_public.h \
- wolfssl/wolfcrypt/coding.h wolfssl/wolfcrypt/md2.h \
- wolfssl/wolfcrypt/hmac.h wolfssl/wolfcrypt/pwdbased.h \
- wolfssl/wolfcrypt/des3.h wolfssl/wolfcrypt/aes.h wolfssl/wolfcrypt/rc2.h \
+ wolfssl/wolfcrypt/asn_public.h wolfssl/wolfcrypt/coding.h \
+ wolfssl/wolfcrypt/md2.h wolfssl/wolfcrypt/hmac.h \
+ wolfssl/wolfcrypt/pwdbased.h wolfssl/wolfcrypt/des3.h \
+ wolfssl/wolfcrypt/aes.h wolfssl/wolfcrypt/rc2.h \
  wolfssl/wolfcrypt/wc_encrypt.h wolfssl/wolfcrypt/chacha.h \
  wolfcrypt/src/misc.c wolfssl/wolfcrypt/misc.h wolfssl/internal.h \
  wolfssl/ssl.h wolfssl/version.h wolfssl/error-ssl.h \
@@ -281,7 +281,6 @@ wolfssl/wolfcrypt/random.h:
 wolfssl/wolfcrypt/asn.h:
 wolfssl/wolfcrypt/dh.h:
 wolfssl/wolfcrypt/ecc.h:
-wolfssl/wolfcrypt/ed25519.h:
 wolfssl/wolfcrypt/asn_public.h:
 wolfssl/wolfcrypt/coding.h:
 wolfssl/wolfcrypt/md2.h:
