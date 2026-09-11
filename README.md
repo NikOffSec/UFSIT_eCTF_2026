@@ -1,21 +1,15 @@
-# eCTF Insecure Example
+# UFSIT eCTF Design
 
-This repository holds the insecure example design for an eCTF Hardware Security Module.
-The rules for the 2026 eCTF can be found here: https://rules.ectf.mitre.org/. Your team
-should **NOT fork this repo**. Instead clone it and push to a new __private__ repo.
+Here holds the remnants of the 2026 embedded CTF. 
 
-## Layout
+Those who decide to explore here will find the incredible security engineering created by our team.
 
-- `firmware/` - Source code to build the firmware
-    - `Makefile` - This makefile is invoked by the eCTF tools when creating an HSM.
-    - `Dockerfile` - Describes the build environment used by eCTF build tools.
-    - `secrets_to_c_header.py` - Python file to convert from global secrets to firmware-parsable header file
-    - `inc/` - Directory with c header files
-    - `src/` - Directory with c source files
-    - `wolfssl/` - Location to place wolfssl library for included Crypto Example
-    - `firmware.ld` - Defines memory layout of built firmware
-- `ectf26_design/` - Pip-installable module for generating secrets
-    - `src/` - Secrets gen source code
-        - `gen_secrets.py` - Generates shared secrets
-    - `pyproject.toml` - File that tells pip how to install this module
-- `Makefile` - Helper script to simplify repetitive build steps
+Many buffer overflows were patched.
+
+A true random number generator with the board API used to implement encryption algorithms like GMAC.
+
+A timer with the board API used for rate limiting on the PIN and random delays to make hardware attacks more annoying.
+
+There is a non-maskable interrupt for brown out resets that put the board into an unuseable state. We are sorry to the voltage glitchers, but it had to be done.
+
+Thanks everyone for a great 2026 competition, from UFSIT.
